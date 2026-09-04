@@ -236,10 +236,16 @@ export default function NoteEditor() {
 
   const mainVideoId = useMemo(() => (videoUrl ? extractYouTubeId(videoUrl) : null), [videoUrl]);
 
+  /* reading stats for the status rail */
+  const words = useMemo(() => markdown.trim().split(/\s+/).filter(Boolean).length, [markdown]);
+  const readMins = useMemo(() => Math.max(1, Math.round(words / 220)), [words]);
+
   const onTab = e => { if (e.key === 'Tab') { e.preventDefault(); insert('  '); } };
 
   return (
     <div className="n-page" data-theme="orange">
+      <div className="n-bg" aria-hidden="true"><div className="n-orb n-orb-1" /><div className="n-orb n-orb-2" /><div className="n-grid" /><div className="n-vig" /></div>
+
       <header className="n-topbar">
         <div className="n-brand"><span className="n-logo">◈</span> DSA·400 <em>· Daily Coding Article</em></div>
         <div className="n-toplinks">
@@ -254,6 +260,7 @@ export default function NoteEditor() {
       <main className="n-shell">
         {/* ── meta ── */}
         <section className="n-meta">
+          <span className="n-kicker">Daily Coding Article · Day {dayStreak || '—'}</span>
           <input className="n-title" placeholder="Article title…" value={title} onChange={e => setTitle(e.target.value)} />
           <div className="n-meta-row">
             <label className="n-field"><span>Date</span><input type="date" value={date} onChange={e => setDate(e.target.value)} /></label>
@@ -311,9 +318,12 @@ export default function NoteEditor() {
               </select>
             )}
             {insTab === 'pattern' && (
-              <select className="n-in" value={patId} onChange={e => setPatId(e.target.value)}>
-                {PATTERNS.map(p => <option key={p.id} value={p.id}>{p.n}. {p.name}{p.core ? ' ★' : ''}</option>)}
-              </select>
+              <>
+                <select className="n-in" value={patId} onChange={e => setPatId(e.target.value)}>
+                  {PATTERNS.map(p => <option key={p.id} value={p.id}>{p.n}. {p.name}{p.core ? ' ★' : ''}</option>)}
+                </select>
+                <span className="n-pop-hint">Pastes as editable Markdown — change anything before publishing.</span>
+              </>
             )}
             <div className="n-pop-actions">
               <button className="n-btn n-btn-ghost" onClick={closeIns}>Cancel</button>
@@ -341,6 +351,15 @@ export default function NoteEditor() {
             </div>
           )}
         </section>
+
+        {/* ── status rail ── */}
+        <div className="n-status">
+          <span>{words.toLocaleString()} words</span>
+          <span>~{readMins} min read</span>
+          <span className="n-status-ok">✓ auto-saves</span>
+          <span className="spacer" />
+          <span>{markdown.length.toLocaleString()} chars · Markdown</span>
+        </div>
 
         {/* ── GitHub source (README + solutions, fetched on view — not stored) ── */}
         {githubUrl.trim() && (

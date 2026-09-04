@@ -38,6 +38,8 @@ export default function NotesManager() {
 
   return (
     <div className="n-page" data-theme="orange">
+      <div className="n-bg" aria-hidden="true"><div className="n-orb n-orb-1" /><div className="n-orb n-orb-2" /><div className="n-grid" /><div className="n-vig" /></div>
+
       <header className="n-topbar">
         <div className="n-brand"><span className="n-logo">◈</span> DSA·400 <em>· My Published Articles</em></div>
         <div className="n-toplinks">

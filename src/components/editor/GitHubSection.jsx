@@ -46,14 +46,29 @@ export default function GitHubSection({ url, autoExpand = false }) {
           </p>
         )}
 
-        {/* README */}
+        {/* README (images + links already rewritten to raw.githubusercontent.com) */}
         {state && state.readme && (
           <details className="n-gh-readme" open>
-            <summary>📄 {state.readmeName || 'README.md'}</summary>
+            <summary>📄 {state.readmeName || 'README.md'} <span className="n-pane-sub">· question &amp; explanation</span></summary>
             <div className="n-gh-readme-body">
               {renderMarkdown(state.readme, { readOnly: true })}
             </div>
           </details>
+        )}
+
+        {/* every image referenced in the README, collected */}
+        {state && state.images && state.images.length > 0 && (
+          <div className="n-gh-assets">
+            <span className="n-pane-sub">🖼 {state.images.length} image{state.images.length > 1 ? 's' : ''} from the repo:</span>
+            <div className="n-gh-thumbs">
+              {state.images.map((u, i) => (
+                <a key={u + i} className="n-gh-thumb" href={u} target="_blank" rel="noopener noreferrer" title={`img_${i + 1}`}>
+                  <img src={u} alt={`repo image ${i + 1}`} loading="lazy" />
+                  <span>img_{i + 1}</span>
+                </a>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* solution code */}

@@ -38,6 +38,8 @@ export default function NoteView() {
 
   return (
     <div className="n-page" data-theme="orange">
+      <div className="n-bg" aria-hidden="true"><div className="n-orb n-orb-1" /><div className="n-orb n-orb-2" /><div className="n-grid" /><div className="n-vig" /></div>
+
       <header className="n-topbar">
         <div className="n-brand"><span className="n-logo">◈</span> DSA·400 <em>· Daily Coding Notes</em></div>
         <div className="n-toplinks">
@@ -70,7 +72,7 @@ export default function NoteView() {
         </article>
 
         <footer className="n-art-foot">
-          <span>published via DSA·400 Daily Notes · {art.slug}</span>
+          <span>published via DSA·400 Daily Notes · {art.slug} · IST (Asia/Kolkata)</span>
         </footer>
       </main>
     </div>

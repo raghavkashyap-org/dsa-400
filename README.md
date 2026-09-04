@@ -9,6 +9,10 @@ One **React (Vite) + Supabase** website that merges two projects into a single p
 
 > Deployed at **https://dsa-400.vercel.app**
 
+> 📘 **Full documentation lives in [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md)** —
+> every feature, the Supabase model, and a deep-dive on the article system
+> (draft → publish → GitHub → blocks → public view).
+
 ---
 
 ## Table of contents
@@ -124,9 +128,12 @@ The login page and the verification page show a **fresh quote on every visit**
 
 ### Daily Coding Article & Note Page (`/note`, `/note/:slug`)
 An "Orange / Ember" themed (`data-theme="orange"`, amber `#fb923c / #f97316 / #ea580c`
-on zinc/slate dark) article authoring system:
+on zinc/slate dark) article authoring system, redesigned after the frontend design system
+(floating pill nav, animated orbs/grid background, glass cards, orange glow, **full-width**
+workspace — deliberately *not* a traditional narrow note editor; dark mode only):
 
-- **Split Markdown editor + live preview** (Write / Split / Preview modes).
+- **Split Markdown editor + live preview** (Write / Split / Preview modes) with a live
+  **status rail** (word count, ~read time, char count, auto-save state).
 - **Embedded code editors** (CodeMirror 6) inside the Markdown — with **context-aware
   autocomplete** (C++ STL / `#include` headers / `std::`, plus Java, Python, JS keywords &
   builtins), **bracket & parentheses matching** with auto-close and orange highlight, and
@@ -156,6 +163,11 @@ so old v1 articles render unchanged):
 - Paste a GitHub folder link (e.g. `https://github.com/…/835-image-overlap`); the app
   **fetches the `README.md` and solution code files (.cpp/.java/.py/.js/.ts) straight from
   GitHub** and renders them in the article — nothing is copied into Supabase.
+- **`raw.githubusercontent.com` is the source of truth**: every relative reference inside
+  the README — question-body links, solution links, and all assets such as
+  `assets/img_1.jpg`, `img_2`, `img_3`, … — is rewritten to an absolute
+  `raw.githubusercontent.com` URL, and **every image in the README is collected and shown
+  as a thumbnail gallery** (`img_1`, `img_2`, …).
 - The README is rendered as Markdown in-page; solution files show as read-only code tabs.
 - **Never overrides your code**: if the article already has a code block, the GitHub
   solution stays behind a "📦 GitHub source" toggle; if you wrote no code, it expands
@@ -197,6 +209,7 @@ prj-dsa/
 ├── package.json
 ├── .env.example               # VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY template
 ├── DEPLOY.md                  # step-by-step Supabase + Vercel + GitHub OAuth guide
+├── docs/DOCUMENTATION.md      # complete site documentation (incl. article-system deep dive)
 ├── supabase/schema.sql        # tables, RLS, triggers, verification RPC (idempotent)
 ├── tools/
 │   ├── extract.mjs            # one-time generator (parses the originals into data)
