@@ -97,12 +97,23 @@ code { font-family: var(--font-mono); font-size: .9em; background: rgba(var(--a-
 .btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important; }
 .icon-btn { width: 34px; height: 34px; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); cursor: pointer; display: grid; place-items: center; font-size: 15px; transition: all var(--dur-fast); }
 .icon-btn:hover { color: var(--text); background: var(--surface-hover); border-color: var(--border-strong); }
-.chip { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 9.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; padding: 3.5px 10px; border-radius: 999px; margin: 2px 3px 2px 0; background: rgba(var(--a-rgb),.13); color: var(--a-300); border: 1px solid rgba(var(--a-rgb),.3); }
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: 3.5px 10px; border-radius: 999px; margin: 2px 3px 2px 0;
+  background: rgba(var(--a-rgb),.13); color: var(--a-300);
+  border: 1px solid rgba(var(--a-rgb),.3);
+  white-space: nowrap;   /* ← stops the 2nd line */
+  flex-shrink: 0;        /* ← stops the parent flex/grid from squeezing it */
+  line-height: 1;        /* ← trims any residual inherited line-height */
+}
 .chip-warn { background: var(--warn-bg); color: #fbbf24; border-color: rgba(245,158,11,.32); }
 .chip-ok { background: var(--ok-bg); color: #34d399; border-color: rgba(16,185,129,.32); }
 .chip-neutral { background: var(--surface-2); color: var(--text-mute); border-color: var(--border); }
 button.chip { cursor: pointer; }
 button.chip.on { background: rgba(var(--a-rgb),.28); color: var(--a-200); }
+
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px 20px; position: relative; overflow: hidden; transition: border-color var(--dur); }
 .card:hover { border-color: rgba(var(--a-rgb),.32); }
 .card-t { font-family: var(--font-display); font-size: 15.5px; font-weight: 700; margin-bottom: 5px; }
@@ -195,7 +206,22 @@ a.pi-name:hover { color: var(--text); text-decoration: underline; }
 .prem { color: var(--warn); font-size: 11px; }
 .pi .pat-chip { flex: none; }
 .today-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
-.note-ta { width: 100%; min-height: 92px; margin-top: 14px; background: var(--bg-sunken); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px 14px; resize: vertical; font-family: var(--font-sans); font-size: 13.2px; line-height: 1.7; }
+.note-ta {
+  width: 100%;
+  min-height: 92px;
+  margin-top: 14px;
+  background: var(--bg-sunken);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  resize: vertical;
+  font-family: var(--font-sans);
+  font-size: 13.2px;
+  line-height: 1.7;
+  overflow-y: hidden;
+  white-space: pre-wrap;
+}
 .note-ta:focus { outline: none; border-color: rgba(var(--a-rgb),.5); }
 .day-nav { display: flex; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .day-nav .spacer { flex: 1; }
