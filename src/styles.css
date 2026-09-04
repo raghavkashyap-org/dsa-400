@@ -8,6 +8,7 @@
   --surface-hover: rgba(255,255,255,.1);
   --border: rgba(255,255,255,.09); --border-strong: rgba(255,255,255,.17);
   --text: #f2f7f4; --text-dim: #a7b5ae; --text-mute: #6f8077; --text-faint: #46564e;
+  --nav-h: 57px;
 
   --ok: #10b981; --ok-bg: rgba(16,185,129,.13);
   --warn: #f59e0b; --warn-bg: rgba(245,158,11,.13);
@@ -170,16 +171,55 @@ button.chip.on { background: rgba(var(--a-rgb),.28); color: var(--a-200); }
 /* ── hero ── */
 #hero { position: relative; padding: 90px 0 40px; }
 .hero-in { text-align: center; max-width: 900px; margin: 0 auto; }
-.kicker { font-family: var(--font-mono); font-size: 10px; letter-spacing: .32em; text-transform: uppercase; color: var(--a-400); display: block; margin-bottom: 16px; }
-#hero h1 { font-family: var(--font-display); font-weight: 800; letter-spacing: -.035em; line-height: 1.04; font-size: clamp(32px, 6.5vw, 60px); }
+.kicker { font-family: var(--font-mono); font-size: 10px; letter-spacing: .32em; text-transform: uppercase; color: var(--a-400); display: block; margin-bottom: 22px; }
+#hero h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -.035em;
+  line-height: 1.04;
+  font-size: clamp(32px, 6.5vw, 60px);
+  margin-bottom: 26px;
+}
 .grad { background: var(--a-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-.hero-sub { color: var(--text-dim); font-size: 16px; max-width: 72ch; margin: 18px auto 0; }
+.hero-sub {
+  color: var(--text-dim);
+  font-size: 16px;
+  line-height: 1.7;
+  max-width: 72ch;
+  margin: 0 0 34px;
+}
 .hero-sub b { color: var(--text); }
-.cta-row { display: flex; gap: 11px; justify-content: center; flex-wrap: wrap; margin-top: 26px; }
-.stat-row { display: flex; gap: 32px; justify-content: center; flex-wrap: wrap; margin: 34px 0; }
-.stat .v { font-family: var(--font-display); font-size: 26px; font-weight: 800; color: var(--a-300); line-height: 1; }
+.cta-row {
+  display: flex;
+  gap: 11px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 0 0 44px;
+}
+
+.stat-row {
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 0 0 6px;
+}
+.stat .v {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--a-300);
+  line-height: 1;
+}
 .stat .v .v-sub { font-size: 14px; color: var(--text-mute); font-weight: 700; }
-.stat .l { font-family: var(--font-mono); font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-mute); margin-top: 6px; }
+.stat .l {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+  margin-top: 6px;
+}
 
 /* ── today grid ── */
 .today-grid { display: grid; grid-template-columns: minmax(0,1.7fr) minmax(280px,1fr); gap: 14px; align-items: start; }
@@ -379,14 +419,103 @@ footer .wrap { display: flex; gap: 18px; flex-wrap: wrap; justify-content: space
 .notice code { background: rgba(0,0,0,.3); }
 
 /* ═══════════════════════ PATTERNS PAGE (cyan) ═══════════════════════ */
-.pat-hero { position: relative; padding: 110px 24px 60px; text-align: center; overflow: hidden; }
-.pat-hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-.pat-hero .hero-in { position: relative; z-index: 5; }
-.mode-chip { position: relative; z-index: 5; margin-top: 22px; background: rgba(0,0,0,.4); border: 1px solid rgba(var(--a-rgb),.4); color: var(--a-300); border-radius: 999px; padding: 8px 16px; font-family: var(--font-mono); font-size: 11px; cursor: pointer; }
-.mode-hint { position: relative; z-index: 5; display: block; margin-top: 10px; font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--text-mute); }
-#modeDots { position: relative; z-index: 5; display: flex; gap: 6px; justify-content: center; margin-top: 12px; }
-#modeDots i { width: 6px; height: 6px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border); }
-#modeDots i.on { background: var(--a-400); box-shadow: 0 0 8px rgba(var(--a-rgb),.8); }
+
+.pat-hero {
+  position: relative;
+  min-height: calc(100vh - var(--nav-h));
+  min-height: calc(100svh - var(--nav-h));
+  height: calc(100vh - var(--nav-h));
+  height: calc(100svh - var(--nav-h));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px 40px;
+  text-align: center;
+  overflow: hidden;
+}
+
+/* ── safety floor: never crush content on tiny/short screens ── */
+@media (max-height: 700px), (max-width: 480px) {
+  .pat-hero {
+    height: auto;
+    min-height: 640px;
+  }
+}
+.pat-hero canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: .55;
+}
+
+/* legibility scrim — darkens center where text sits, fades toward top/edges */
+.pat-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 55% at 50% 58%, rgba(3,18,13,.72) 0%, rgba(3,18,13,.35) 55%, transparent 78%),
+    linear-gradient(to bottom, rgba(3,18,13,.15) 0%, transparent 22%, transparent 70%, rgba(3,18,13,.55) 100%);
+}
+
+.pat-hero .hero-in {
+  position: relative;
+  z-index: 5;
+  max-width: 860px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.mode-chip {
+  position: relative;
+  z-index: 5;
+  margin-top: 26px;
+  background: rgba(3,18,13,.55);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(var(--a-rgb),.4);
+  color: var(--a-300);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.mode-hint {
+  position: relative;
+  z-index: 5;
+  display: block;
+  margin-top: 12px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+
+#modeDots {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 14px;
+}
+#modeDots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+#modeDots i.on {
+  background: var(--a-400);
+  box-shadow: 0 0 8px rgba(var(--a-rgb),.8);
+}
 .langtog { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 999px; overflow: hidden; }
 .langtog button { border: 0; background: none; color: var(--text-mute); cursor: pointer; font: 650 11px var(--font-mono); letter-spacing: .06em; padding: 6px 13px; }
 .langtog button + button { border-left: 1px solid var(--border); }
