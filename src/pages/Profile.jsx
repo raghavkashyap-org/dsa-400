@@ -215,7 +215,8 @@ export default function Profile() {
                     <span className="u-range">Days {u.days[0]}–{u.days[u.days.length - 1]}</span>
                   </span>
                   <span className="u-meta">
-                    <span className="chip chip-neutral">{incN} included · {days.length - incN} optional</span>
+                    <span className="chip chip-ok" title="included days count toward your plan">✓ {incN} in</span>{' '}
+                    <span className="chip chip-neutral" title="optional days are skipped but stay logged">{days.length - incN} opt</span>
                     <button className="chip" onClick={e => { e.preventDefault(); s.setUnitIncluded(ui, allExcluded); }}>
                       {allExcluded ? '＋ include all' : 'make all optional'}
                     </button>

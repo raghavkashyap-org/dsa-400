@@ -63,7 +63,8 @@ export default function PlanPanel({ s, onOpenDay }) {
               <span className="u-meta">
                 <span className="u-bar"><i style={{ width: (100 * doneN / days.length) + '%' }} /></span>
                 <span className="u-count">{doneN}/{days.length}</span>
-                <span className="chip chip-neutral" title="included days count toward your plan; optional days are skipped but stay logged">{incN} included · {days.length - incN} optional</span>
+                <span className="chip chip-ok" title="included days count toward your plan">✓ {incN} in</span>
+                <span className="chip chip-neutral" title="optional days are skipped but stay logged">{days.length - incN} opt</span>
                 <button className="chip" title={excludedAll ? 'Include this topic' : 'Make this topic optional'}
                   onClick={e => { e.preventDefault(); s.setUnitIncluded(ui, excludedAll); }}>
                   {excludedAll ? '＋ include' : 'optional'}

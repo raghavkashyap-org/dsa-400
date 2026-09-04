@@ -216,6 +216,7 @@ prj-dsa/
 | `notes` / `note_history` | pattern notes + edit timeline |
 | `events` | append-only ledger of everything the user did |
 | `streak_log` | streak snapshots recorded server-side |
+| `articles` | published Daily Notes — public read / owner write; versioned (`schema_version`), with `github_url` + `blocks` |
 
 The schema also defines a SECURITY DEFINER function
 `get_commitment_verification(p_hash)` that returns exactly what a visitor is allowed to see

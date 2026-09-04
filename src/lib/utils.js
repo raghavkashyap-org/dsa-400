@@ -10,6 +10,16 @@ export const MN = ['January','February','March','April','May','June','July','Aug
 export const pretty = iso => { const d = parseYmd(iso); return `${MN[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`; };
 export const prettyShort = iso => { const d = parseYmd(iso); return `${d.getDate()} ${MN[d.getMonth()].slice(0,3)} ${String(d.getFullYear()).slice(2)}`; };
 
+/* display a timestamp in India (Asia/Kolkata, +05:30 IST) */
+export const formatIST = v => {
+  const d = v instanceof Date ? v : new Date(v);
+  if (Number.isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true,
+  }).format(d);
+};
+
 /* ── SHA-512 (Web Crypto) ── */
 export async function sha512(text) {
   const buf = await crypto.subtle.digest('SHA-512', new TextEncoder().encode(text));

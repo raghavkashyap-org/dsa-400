@@ -136,7 +136,9 @@ function patternSection(p) {
     + '<h2>' + p.name + '</h2>'
     + '<div class="row" style="margin-top:12px;flex-wrap:wrap;gap:8px">'
     + (p.core ? '<span class="star">★ interview core</span>' : '<span class="chip chip-neutral">supporting pattern</span>')
-    + '<span class="core-chip">' + p.use.length + ' triggers</span></div></div>';
+    + '<span class="core-chip">' + p.use.length + ' triggers</span>'
+    + '<a class="pat-add" href="/note?pattern=' + p.id + '" title="Paste this whole pattern block into a Daily Note">＋ Add to article</a>'
+    + '</div></div>';
 
   h += '<div class="wavy"><div class="wavy-in"><div class="pm-grid">'
     + '<div><div class="pm-h">' + IC.info + 'What the pattern is</div><div class="pm-body">' + p.what + '</div></div>'

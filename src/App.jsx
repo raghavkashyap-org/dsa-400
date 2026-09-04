@@ -11,6 +11,11 @@ import Commitment from './pages/Commitment';
 import Ledger from './pages/Ledger';
 import Profile from './pages/Profile';
 import Questions from './pages/Questions';
+import NotesManager from './pages/NotesManager';
+
+/* CodeMirror + markdown engine are heavy — load the note pages on demand */
+const NoteEditor = lazy(() => import('./pages/NoteEditor'));
+const NoteView = lazy(() => import('./pages/NoteView'));
 
 /* CodeMirror + markdown engine are heavy — load the note pages on demand */
 const NoteEditor = lazy(() => import('./pages/NoteEditor'));
