@@ -308,3 +308,12 @@ create policy "articles public read" on public.articles
 drop policy if exists "articles owner write" on public.articles;
 create policy "articles owner write" on public.articles
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- v7 additions: schema versioning + GitHub source for articles
+-- ═══════════════════════════════════════════════════════════════════════
+alter table public.articles add column if not exists schema_version int not null default 1;
+alter table public.articles add column if not exists github_url text;
+
+-- v8: structured article blocks (example / complexity / mistakes / pattern)
+alter table public.articles add column if not exists blocks jsonb;

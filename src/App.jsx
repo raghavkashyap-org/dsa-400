@@ -17,10 +17,6 @@ import NotesManager from './pages/NotesManager';
 const NoteEditor = lazy(() => import('./pages/NoteEditor'));
 const NoteView = lazy(() => import('./pages/NoteView'));
 
-/* CodeMirror + markdown engine are heavy — load the note pages on demand */
-const NoteEditor = lazy(() => import('./pages/NoteEditor'));
-const NoteView = lazy(() => import('./pages/NoteView'));
-
 function Spinner() {
   return (
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: 'var(--text-mute)' }}>
@@ -50,6 +46,7 @@ export default function App() {
         <Route path="/questions" element={<Questions />} />
         <Route path="/note" element={<Protected><Suspense fallback={<Spinner />}><NoteEditor /></Suspense></Protected>} />
         <Route path="/note/:slug" element={<Suspense fallback={<Spinner />}><NoteView /></Suspense>} />
+        <Route path="/notes" element={<Protected><NotesManager /></Protected>} />
         <Route path="/profile" element={<Protected><Profile /></Protected>} />
         <Route path="/file" element={<Protected><Ledger /></Protected>} />
         <Route path="/onboarding" element={<Protected><Onboarding /></Protected>} />

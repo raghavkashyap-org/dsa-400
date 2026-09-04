@@ -136,12 +136,41 @@ on zinc/slate dark) article authoring system:
 - **Clickable timestamps** — `[12:34]` / `[1:02:03]` seek the video (window event
   `dsa400:seek` + direct postMessage seek).
 - **Hyperlink insertion** toolbar, plus bold/italic/headings/quotes/code/hr.
-- **Note timeline** — every auto-save is logged; restore any version. Draft auto-saves
-  locally (edits are logged).
-- **Publish Article** — compiles the exact JSON payload
-  (`slug, title, date, dayStreak, tags, videoUrl, contentMarkdown, isPublished`), stores it
-  locally and (when Supabase is connected) to the `articles` table, and exposes it at
-  `/note/{slug}` for anyone with the link.
+- **Publish Article** — compiles a **versioned JSON payload**
+  (`slug, title, date, dayStreak, tags, videoUrl, githubUrl, contentMarkdown, blocks,
+  isPublished, schemaVersion`) → stored locally + in the Supabase `articles` table → readable
+  by anyone at `/note/{slug}`. `schema_version` guarantees articles published today keep
+  rendering even after future design changes.
+
+### Article blocks (hybrid, optional — schema v2)
+Beyond the Markdown body, an article can carry structured blocks (stored as optional JSON,
+so old v1 articles render unchanged):
+- **📌 Example** — input / output / explanation, styled as separate code boxes.
+- **📈 Time & Space complexity** — big-O badges plus **small growth sparkline charts**
+  (O(1), O(log n), O(√n), O(n), O(n log n), O(n²), O(n³), O(2ⁿ), O(n!)) for both time and
+  space, in a collapsible block.
+- **🧩 Pattern recognition** — free-text block.
+- **⚠️ Mistakes I made** — optional, styled as a warning block.
+
+### GitHub problem source (no Supabase load)
+- Paste a GitHub folder link (e.g. `https://github.com/…/835-image-overlap`); the app
+  **fetches the `README.md` and solution code files (.cpp/.java/.py/.js/.ts) straight from
+  GitHub** and renders them in the article — nothing is copied into Supabase.
+- The README is rendered as Markdown in-page; solution files show as read-only code tabs.
+- **Never overrides your code**: if the article already has a code block, the GitHub
+  solution stays behind a "📦 GitHub source" toggle; if you wrote no code, it expands
+  automatically.
+
+### Pattern reference import
+- From **/patterns**, every pattern has a **"＋ Add to article"** button that opens the note
+  editor with the **entire pattern block pasted in** (what/model/identity/when-to-use/
+  complexity ladder/templates C++ & Java/sample walkthrough/practice set). Also available
+  as a **🧩 Pattern** tab in the editor's insert toolbar.
+
+### Management
+- **`/notes`** lists every published article (Supabase + local, merged) with open / edit /
+  download-JSON / delete. The editor also opens existing articles via `/note?edit={slug}`.
+- All timestamps render in **IST (Asia/Kolkata, +05:30)**.
 
 ### Pattern Master (`/patterns`)
 - The complete original `dsa_Patterns_new.html` content, preserved verbatim behind `/patterns`.
@@ -188,16 +217,20 @@ prj-dsa/
     │   ├── articles.js        # article persistence (localStorage + Supabase `articles`)
     │   ├── note-mdx.jsx       # markdown-it + video/timestamp rules + React token renderer
     │   ├── note-video.js      # video registry + seekAllVideos (window event + postMessage)
+    │   ├── github.js          # parse GitHub folder links → fetch README + solution code
+    │   ├── pattern-md.js      # Pattern Master block → Markdown exporter (for articles)
     │   ├── quotes.js          # rotating motivational quotes
     │   ├── toast.js           # toast bus
     │   ├── tracker-data.js    # 400-day plan (phases, units, days, items) + LC cross-refs
     │   └── patterns-data.js   # the 40-pattern Pattern Master content
     ├── pages/                 # Login, Register, Onboarding, Tracker, Patterns,
     │                          # Commitment (/hash), Ledger (/file), Profile, Questions,
-    │                          # NoteEditor (/note), NoteView (/note/:slug)
+    │                          # NoteEditor (/note), NoteView (/note/:slug),
+    │                          # NotesManager (/notes)
     └── components/            # Nav, Chain, SearchModal, TodayPanel, CalendarPanel,
                                # PlanPanel, ProgressPanel, CommitmentCard
-                               # + editor/ (CodeBlock · CodeMirror, VideoEmbed, Timestamp)
+                               # + editor/ (CodeBlock · CodeMirror, VideoEmbed, Timestamp,
+                               #   ArticleBlocks, GitHubSection)
 ```
 
 ---

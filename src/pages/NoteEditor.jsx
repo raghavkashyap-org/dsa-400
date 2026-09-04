@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTrackerData } from '../hooks/useTrackerData';
 import { renderMarkdown, slugify, extractYouTubeId } from '../lib/note-mdx';
 import { VideoEmbed } from '../components/editor/VideoEmbed';
-import { publishArticle, listArticlesLocal } from '../lib/articles';
-import { todayIso, pretty } from '../lib/utils';
+import GitHubSection from '../components/editor/GitHubSection';
+import ArticleBlocks from '../components/editor/ArticleBlocks';
+import { PATTERNS, getPattern, patternToMarkdown } from '../lib/pattern-md';
+import { publishArticle, loadArticle } from '../lib/articles';
+import { todayIso, formatIST } from '../lib/utils';
 import { toast } from '../lib/toast';
 
 const DRAFT_KEY = 'dsa400-note-draft-v1';
-const HIST_KEY = 'dsa400-note-history-v1';
 
 const STARTER = `# Today I learned…
 
@@ -44,6 +46,9 @@ int lowerBound(vector<int>& a, int target) {
 export default function NoteEditor() {
   const { user } = useAuth();
   const tracker = useTrackerData();
+  const [params] = useSearchParams();
+  const editSlug = params.get('edit');
+  const patternId = params.get('pattern');
 
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(todayIso());
@@ -51,11 +56,12 @@ export default function NoteEditor() {
   const [slug, setSlug] = useState('');
   const [tags, setTags] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+  const [githubUrl, setGithubUrl] = useState('');
+  const [blocks, setBlocks] = useState({});
   const [markdown, setMarkdown] = useState('');
   const [view, setView] = useState('split'); // split | write | preview
   const [loaded, setLoaded] = useState(false);
 
-  const [hist, setHist] = useState([]);
   const [lastSaved, setLastSaved] = useState(null);
   const [published, setPublished] = useState(null);
   const [showPublish, setShowPublish] = useState(false);
@@ -71,41 +77,58 @@ export default function NoteEditor() {
     }
   }, [tracker.ready, tracker.streak, tracker.pointer]); // eslint-disable-line
 
-  /* ── load draft + history once ── */
+  /* ── load draft once (or an existing article via ?edit=slug, or ?pattern=ID) ── */
   useEffect(() => {
-    try {
-      const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
-      if (d) {
-        setTitle(d.title || ''); setDate(d.date || todayIso()); setDayStreak(d.dayStreak || 0);
-        setSlug(d.slug || ''); setTags(d.tags || ''); setVideoUrl(d.videoUrl || '');
-        setMarkdown(d.markdown || '');
-      } else {
-        setMarkdown(STARTER);
+    (async () => {
+      if (editSlug) {
+        const a = await loadArticle(editSlug);
+        if (a) {
+          setTitle(a.title); setDate(a.date); setDayStreak(a.dayStreak);
+          setSlug(a.slug); setTags((a.tags || []).join(', ')); setVideoUrl(a.videoUrl || '');
+          setGithubUrl(a.githubUrl || ''); setBlocks(a.blocks || {});
+          setMarkdown(a.contentMarkdown || '');
+          setLoaded(true);
+          toast(`Editing <b>${a.title}</b> — republish to save changes.`);
+          return;
+        }
       }
-      setHist(JSON.parse(localStorage.getItem(HIST_KEY) || '[]'));
-    } catch {}
-    setLoaded(true);
-  }, []);
+      let draftMd = null;
+      try {
+        const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+        if (d) {
+          setTitle(d.title || ''); setDate(d.date || todayIso()); setDayStreak(d.dayStreak || 0);
+          setSlug(d.slug || ''); setTags(d.tags || ''); setVideoUrl(d.videoUrl || '');
+          setGithubUrl(d.githubUrl || ''); setBlocks(d.blocks || {});
+          draftMd = d.markdown || '';
+        } else {
+          draftMd = STARTER;
+        }
+      } catch {}
+      // paste a whole pattern block from /patterns
+      if (patternId) {
+        const pat = getPattern(patternId);
+        if (pat) {
+          const pmd = patternToMarkdown(pat);
+          draftMd = (draftMd ? draftMd.replace(/\n*$/, '') + '\n\n' : '') + pmd;
+          setTitle(t => (t || `Pattern — ${pat.name}`));
+          toast(`Pasted the full <b>${pat.name}</b> pattern block.`);
+        }
+      }
+      setMarkdown(draftMd || '');
+      setLoaded(true);
+    })();
+  }, [editSlug, patternId]);
 
-  /* ── auto-save (debounced) + edits are logged ── */
-  const lastSnap = useRef('');
+  /* ── auto-save (debounced) — single draft only, no version copies ── */
   useEffect(() => {
     if (!loaded) return;
     const id = setTimeout(() => {
-      const draft = { title, date, dayStreak, slug, tags, videoUrl, markdown };
+      const draft = { title, date, dayStreak, slug, tags, videoUrl, githubUrl, blocks, markdown };
       try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch {}
-      if (markdown !== lastSnap.current) {
-        lastSnap.current = markdown;
-        setHist(h => {
-          const next = [{ ts: Date.now(), title, md: markdown }, ...h].slice(0, 40);
-          try { localStorage.setItem(HIST_KEY, JSON.stringify(next)); } catch {}
-          return next;
-        });
-      }
       setLastSaved(new Date());
     }, 900);
     return () => clearTimeout(id);
-  }, [loaded, title, date, dayStreak, slug, tags, videoUrl, markdown]);
+  }, [loaded, title, date, dayStreak, slug, tags, videoUrl, githubUrl, blocks, markdown]);
 
   /* ── window seek event indicator ── */
   useEffect(() => {
@@ -156,6 +179,7 @@ export default function NoteEditor() {
   const [vidUrl, setVidUrl] = useState('');
   const [tsVal, setTsVal] = useState('12:34');
   const [codeLang, setCodeLang] = useState('cpp');
+  const [patId, setPatId] = useState('p01');
 
   const closeIns = () => setInsOpen(false);
   const openIns = tab => { setInsTab(tab); setInsOpen(true); };
@@ -176,6 +200,9 @@ export default function NoteEditor() {
       insert(`[${tsVal}]`);
     } else if (insTab === 'code') {
       wrap(`\n\`\`\`${codeLang}\n`, '\n```\n');
+    } else if (insTab === 'pattern') {
+      const pat = getPattern(patId);
+      if (pat) { insert('\n' + patternToMarkdown(pat) + '\n'); toast(`Pasted <b>${pat.name}</b> pattern block.`); }
     }
     closeIns();
   };
@@ -190,7 +217,9 @@ export default function NoteEditor() {
       dayStreak,
       tags: tags.split(',').map(x => x.trim()).filter(Boolean),
       videoUrl: videoUrl.trim() || null,
+      githubUrl: githubUrl.trim() || null,
       contentMarkdown: markdown,
+      blocks,
     }, user?.id);
     setPublished(payload);
     setShowPublish(true);
@@ -206,7 +235,6 @@ export default function NoteEditor() {
   };
 
   const mainVideoId = useMemo(() => (videoUrl ? extractYouTubeId(videoUrl) : null), [videoUrl]);
-  const localArticles = useMemo(() => listArticlesLocal(), [showPublish]); // eslint-disable-line
 
   const onTab = e => { if (e.key === 'Tab') { e.preventDefault(); insert('  '); } };
 
@@ -217,7 +245,8 @@ export default function NoteEditor() {
         <div className="n-toplinks">
           <Link className="n-link" to="/">← Tracker</Link>
           <Link className="n-link" to="/questions">Questions</Link>
-          <span className="n-save">{lastSaved ? `auto-saved ${lastSaved.toLocaleTimeString()}` : 'auto-saves · edits are logged'}</span>
+          <Link className="n-link" to="/notes">📚 My articles</Link>
+          <span className="n-save">{lastSaved ? `auto-saved ${formatIST(lastSaved)} (IST)` : 'auto-saves'}</span>
           <button className="n-btn n-btn-primary" onClick={doPublish}>🚀 Publish Article</button>
         </div>
       </header>
@@ -232,6 +261,7 @@ export default function NoteEditor() {
             <label className="n-field n-field-slug"><span>Slug</span><input value={slug} onChange={e => setSlug(e.target.value)} placeholder={slugify(title) || 'auto'} /></label>
             <label className="n-field"><span>Tags (comma)</span><input value={tags} onChange={e => setTags(e.target.value)} placeholder="DSA, Binary Search, C++" /></label>
             <label className="n-field"><span>Main video URL</span><input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=…" /></label>
+            <label className="n-field n-field-slug"><span>GitHub problem link</span><input value={githubUrl} onChange={e => setGithubUrl(e.target.value)} placeholder="https://github.com/…/835-image-overlap" /></label>
           </div>
           <div className="n-meta-hint">public route → <b>/note/{finalSlug}</b> · published articles are read by anyone with the link</div>
         </section>
@@ -247,6 +277,7 @@ export default function NoteEditor() {
           <button className="n-tb" onClick={() => openIns('video')} title="Insert YouTube video">▶ Video</button>
           <button className="n-tb" onClick={() => openIns('time')} title="Insert timestamp">⏱ [12:34]</button>
           <button className="n-tb" onClick={() => openIns('code')} title="Insert code block">{'{}'} Code</button>
+          <button className="n-tb" onClick={() => openIns('pattern')} title="Paste a whole Pattern Master block">🧩 Pattern</button>
           <button className="n-tb" onClick={() => insert('\n---\n')} title="Divider">—</button>
           <span className="spacer" />
           <div className="n-viewtoggle">
@@ -259,7 +290,7 @@ export default function NoteEditor() {
         {insOpen && (
           <div className="n-popover">
             <div className="n-pop-tabs">
-              {[['link', 'Link'], ['video', 'Video'], ['time', 'Timestamp'], ['code', 'Code block']].map(([k, l]) => (
+              {[['link', 'Link'], ['video', 'Video'], ['time', 'Timestamp'], ['code', 'Code block'], ['pattern', 'Pattern']].map(([k, l]) => (
                 <button key={k} className={insTab === k ? 'on' : ''} onClick={() => setInsTab(k)}>{l}</button>
               ))}
             </div>
@@ -277,6 +308,11 @@ export default function NoteEditor() {
             {insTab === 'code' && (
               <select className="n-in" value={codeLang} onChange={e => setCodeLang(e.target.value)}>
                 {['cpp', 'java', 'python', 'javascript', 'c'].map(l => <option key={l} value={l}>{l}</option>)}
+              </select>
+            )}
+            {insTab === 'pattern' && (
+              <select className="n-in" value={patId} onChange={e => setPatId(e.target.value)}>
+                {PATTERNS.map(p => <option key={p.id} value={p.id}>{p.n}. {p.name}{p.core ? ' ★' : ''}</option>)}
               </select>
             )}
             <div className="n-pop-actions">
@@ -300,27 +336,48 @@ export default function NoteEditor() {
               <div className="n-preview">
                 {mainVideoId && <VideoEmbed videoId={mainVideoId} title="Main video" />}
                 {renderMarkdown(markdown, { onFenceChange: handleFenceChange }) || <p className="n-empty">Start writing…</p>}
+                <ArticleBlocks blocks={blocks} />
               </div>
             </div>
           )}
         </section>
 
-        {/* ── note timeline ── */}
-        <section className="n-timeline">
-          <header className="n-tl-h">
-            <span>🕘 Note timeline</span>
-            <span className="n-pane-sub">auto-saves · edits are logged · click restore to roll back</span>
-          </header>
-          {hist.length === 0 && <p className="n-empty">No saved versions yet — they appear as you type.</p>}
-          <div className="n-tl-list">
-            {hist.slice(0, 8).map((h, i) => (
-              <div className="n-tl-item" key={h.ts + '' + i}>
-                <span className="n-tl-ts">{new Date(h.ts).toLocaleString()}</span>
-                <span className="n-tl-prev">{h.md.replace(/\n+/g, ' ').slice(0, 90) || '(empty)'}</span>
-                <button className="n-mini" onClick={() => { setMarkdown(h.md); if (h.title) setTitle(h.title); }}>restore</button>
-              </div>
-            ))}
-          </div>
+        {/* ── GitHub source (README + solutions, fetched on view — not stored) ── */}
+        {githubUrl.trim() && (
+          <section style={{ marginTop: 14 }}>
+            <GitHubSection url={githubUrl.trim()} autoExpand={!/```/.test(markdown)} />
+          </section>
+        )}
+
+        {/* ── structured blocks editor ── */}
+        <section className="n-blocks-ed">
+          <header className="n-tl-h">🧱 Article blocks <span className="n-pane-sub">example · complexity · pattern · mistakes — optional, shown in the published article</span></header>
+          <details className="n-block n-block-ed">
+            <summary>📌 Example (input / output / explanation)</summary>
+            <div className="n-ed-grid">
+              <label className="n-field"><span>Input</span><textarea className="n-ta-sm" value={blocks.example?.input || ''} onChange={e => setBlocks({ ...blocks, example: { ...blocks.example, input: e.target.value } })} placeholder="nums = [2,7,11,15], target = 9" /></label>
+              <label className="n-field"><span>Output</span><textarea className="n-ta-sm" value={blocks.example?.output || ''} onChange={e => setBlocks({ ...blocks, example: { ...blocks.example, output: e.target.value } })} placeholder="[0,1]" /></label>
+              <label className="n-field" style={{ flexBasis: '100%' }}><span>Explanation</span><textarea className="n-ta-sm" value={blocks.example?.explanation || ''} onChange={e => setBlocks({ ...blocks, example: { ...blocks.example, explanation: e.target.value } })} placeholder="Why this example matters…" /></label>
+            </div>
+          </details>
+          <details className="n-block n-block-ed">
+            <summary>📈 Time &amp; Space complexity</summary>
+            <div className="n-ed-grid">
+              <label className="n-field"><span>Time complexity</span><input value={blocks.complexity?.time || ''} onChange={e => setBlocks({ ...blocks, complexity: { ...blocks.complexity, time: e.target.value } })} placeholder="O(n log n)" /></label>
+              <label className="n-field"><span>Space complexity</span><input value={blocks.complexity?.space || ''} onChange={e => setBlocks({ ...blocks, complexity: { ...blocks.complexity, space: e.target.value } })} placeholder="O(n)" /></label>
+            </div>
+            {((blocks.complexity?.time) || (blocks.complexity?.space)) && (
+              <div style={{ marginTop: 8 }}><ArticleBlocks blocks={{ complexity: blocks.complexity }} /></div>
+            )}
+          </details>
+          <details className="n-block n-block-ed">
+            <summary>🧩 Pattern recognition</summary>
+            <label className="n-field"><span>Which pattern(s) and why</span><textarea className="n-ta-sm" value={blocks.pattern || ''} onChange={e => setBlocks({ ...blocks, pattern: e.target.value })} placeholder="e.g. Two Pointers — sorted array + pair condition, shrink from both ends." /></label>
+          </details>
+          <details className="n-block n-block-ed">
+            <summary>⚠️ Mistakes I made <span className="n-pane-sub">(optional)</span></summary>
+            <label className="n-field"><span>Mistakes / gotchas</span><textarea className="n-ta-sm" value={blocks.mistakes || ''} onChange={e => setBlocks({ ...blocks, mistakes: e.target.value })} placeholder="e.g. Forgot to handle the empty array; off-by-one in the partition index." /></label>
+          </details>
         </section>
 
         {/* ── publish result ── */}
@@ -331,21 +388,12 @@ export default function NoteEditor() {
                 <b>✅ Published — “{published.title}”</b>
                 <div className="n-pane-sub">
                   <a className="n-link" href={`/note/${published.slug}`} target="_blank" rel="noopener noreferrer">open /note/{published.slug} →</a>
+                  {' '}· <Link className="n-link" to="/notes">manage my articles</Link>
                 </div>
               </div>
               <button className="n-btn n-btn-ghost" onClick={downloadJson}>⬇ Download JSON</button>
             </div>
             <pre className="n-json">{JSON.stringify(published, null, 2)}</pre>
-            {localArticles.length > 0 && (
-              <div className="n-pub-list">
-                <span className="n-pane-sub">Your published articles:</span>
-                {localArticles.map(a => (
-                  <a key={a.slug} className="n-chip" href={`/note/${a.slug}`} target="_blank" rel="noopener noreferrer">
-                    {pretty(a.date)} · {a.title}
-                  </a>
-                ))}
-              </div>
-            )}
           </section>
         )}
       </main>
