@@ -154,12 +154,12 @@ Beyond the Markdown body, an article can carry structured blocks (stored as opti
 so old v1 articles render unchanged):
 - **📌 Example** — input / output / explanation, styled as separate code boxes.
 - **📈 Time & Space complexity** — big-O badges plus an **interactive growth panel**: a
-  **log-scale slider** sweeps `n` from 1 → 10⁶ and each of Time/Space is plotted on
-  **log–log axes** with a `10⁷ ops ≈ 1 s` reference line, so `O(n)`, `O(n²)`, `O(n⁴)`,
-  `O(2ⁿ)`, `O(n!)` look genuinely different. **The axes are author-controlled at edit
-  time** (horizontal `n` up to 10¹–10⁹, vertical ops up to 10²–10¹⁸) so zooming in
-  separates close curves like `O(n²)` vs `O(n^2.5)`. A live readout shows **operations
-  & time @ 10⁷ ops/s** at the current `n`, graded fast/seconds/too-slow.
+  **log-scale slider** sweeps `n` from 1 → 10⁹ and each of Time/Space is plotted on
+  **log–log axes** with a `10⁷ ops ≈ 1 s` reference line. **The axes are author-controlled
+  at edit time**: set the horizontal `n` range (up to 10⁹) and vertical ops range (up to
+  10¹²), and **type any list of values to mark** (e.g. `n: 2, 12, 18, 24` and
+  `ops: 3, 15, 30, 45`) — each draws a reference line and the panel lists the **operations
+  at every marked n**, so close curves like `O(n²)` vs `O(n^2.5)` are clearly separable.
 - **🧩 Pattern recognition** — free-text block.
 - **⚠️ Mistakes I made** — optional, styled as a warning block.
 

@@ -1378,3 +1378,19 @@ a.n-diff-link:hover { border-color: var(--no-500); color: var(--no-400); }
 .n-vid-toggle input[type="checkbox"] { accent-color: var(--no-500); width: 15px; height: 15px; cursor: pointer; }
 .n-vid-start { flex-direction: row; gap: 8px; }
 .n-vid-start input[type="number"] { width: 90px; background: rgba(0,0,0,.35); border: 1px solid var(--no-700); border-radius: 8px; color: var(--no-300t); padding: 6px 9px; font-size: 13px; }
+
+/* ── v12: complexity axis controls (editor-only) ── */
+.n-cx-axis { display: flex; flex-direction: column; gap: 10px; background: rgba(0,0,0,.22); border: 1px solid var(--no-700); border-radius: 12px; padding: 12px 16px; margin: 10px 0 14px; }
+.n-cx-axis-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 12.5px; color: var(--no-300t); }
+.n-cx-axis-row span { min-width: 170px; }
+.n-cx-axis-row b { color: var(--no-400); font-family: var(--font-mono); }
+.n-cx-axis-row em { font-style: normal; color: var(--no-400t); font-size: 11px; font-family: var(--font-mono); }
+.n-cx-axis-row input[type="range"] { flex: 1; min-width: 160px; }
+.n-cx-axis-row input[type="range"]::-webkit-slider-thumb { background: var(--no-400); }
+.n-cx-axis-row input[type="range"]::-moz-range-thumb { background: var(--no-400); }
+
+/* ── v13: complexity user-set axis marks ── */
+.n-cx-axis-row .n-cx-mark-in { flex: 1 1 220px; min-width: 0; font-family: var(--font-mono); font-size: 12px; }
+.n-cx-marks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--no-400t); }
+.n-cx-marks span { background: rgba(0,0,0,.28); border: 1px solid var(--no-700); border-radius: 7px; padding: 2px 8px; }
+.n-cx-marks b { color: var(--no-300t); }
