@@ -241,10 +241,15 @@ export default function NoteEditor() {
     }, user?.id);
     setPublished(payload);
     setShowPublish(true);
-    toast(`<b>Published</b> — live at /note/${payload.username}/${payload.slug}`);
+    if (payload.synced) {
+      toast(`<b>Published</b> — live at /note/${payload.username}/${payload.slug}`);
+    } else {
+      toast(`⚠️ <b>Saved locally only</b> — Supabase sync failed. Apply the v9 schema migration (supabase/schema.sql) then republish.`);
+    }
   };
   const downloadJson = () => {
-    const blob = new Blob([JSON.stringify(published, null, 2)], { type: 'application/json' });
+    const { synced, ...clean } = published;
+    const blob = new Blob([JSON.stringify(clean, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `${published.slug}.json`;
@@ -427,7 +432,13 @@ export default function NoteEditor() {
               <label className="n-field"><span>Space complexity</span><input value={blocks.complexity?.space || ''} onChange={e => setBlocks({ ...blocks, complexity: { ...blocks.complexity, space: e.target.value } })} placeholder="O(n)" /></label>
             </div>
             {((blocks.complexity?.time) || (blocks.complexity?.space)) && (
-              <div style={{ marginTop: 8 }}><ArticleBlocks blocks={{ complexity: blocks.complexity }} /></div>
+              <div style={{ marginTop: 8 }}>
+                <ArticleBlocks
+                  blocks={{ complexity: blocks.complexity }}
+                  editable
+                  onComplexityAxis={axis => setBlocks({ ...blocks, complexity: { ...blocks.complexity, axis } })}
+                />
+              </div>
             )}
           </details>
           <details className="n-block n-block-ed">
