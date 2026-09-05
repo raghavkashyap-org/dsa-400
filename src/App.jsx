@@ -45,7 +45,7 @@ export default function App() {
         <Route path="/patterns" element={<Protected><Patterns /></Protected>} />
         <Route path="/questions" element={<Questions />} />
         <Route path="/note" element={<Protected><Suspense fallback={<Spinner />}><NoteEditor /></Suspense></Protected>} />
-        <Route path="/note/:slug" element={<Suspense fallback={<Spinner />}><NoteView /></Suspense>} />
+        <Route path="/note/:username/:slug" element={<Suspense fallback={<Spinner />}><NoteView /></Suspense>} />
         <Route path="/notes" element={<Protected><NotesManager /></Protected>} />
         <Route path="/profile" element={<Protected><Profile /></Protected>} />
         <Route path="/file" element={<Protected><Ledger /></Protected>} />

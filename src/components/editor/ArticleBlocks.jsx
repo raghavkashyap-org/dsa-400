@@ -1,222 +1,128 @@
-import React, { useId } from 'react';
+import React, { useMemo, useState } from 'react';
+import { engine, opsLogAt, fmtN, fmtOps, fmtDur, opsGrade } from '../../lib/complexity';
 
 /* Renders the optional structured blocks of an article:
-   example (input/output/explanation) · complexity (badges + growth charts) ·
-   pattern recognition (free text) · mistakes (free text). */
+   example (input/output/explanation) · complexity (interactive growth chart
+   with an n-slider) · pattern recognition (free text) · mistakes (free text). */
 
-/* ═══════════════════════════════════════════════════════════════════════
-   Dynamic big-O growth evaluator.
-   Parses ARBITRARY complexity notation — O(n^4), O(n log n), O(n² + m),
-   O(2^n), O(n!), O(√n), O(log n), O(n·m), O(1), … — into a normalized
-   growth curve. No fixed lookup table: any expression gets a chart, and
-   unparseable strings degrade to a flat guide instead of breaking.        */
+/* ── fixed log–log chart: x = log10(n) 0..6, y = log10(ops) 0..18 ── */
+const YMAX = 18, XMAX = 6, K = 96;
 
-const N_MAX = 24;
+function ComplexityChart({ notation, color, label, n }) {
+  const { f, ok } = useMemo(() => engine(notation), [notation]);
 
-function factorial(n) {
-  let r = 1;
-  for (let i = 2; i <= n; i++) r *= i;
-  return r;
-}
+  const W = 300, H = 168, L = 34, R = 12, T = 14, B = 26;
+  const pw = W - L - R, ph = H - T - B;
+  const X = lv => L + (lv / XMAX) * pw;
+  const Y = lv => T + ph - (Math.max(0, Math.min(YMAX, lv)) / YMAX) * ph;
 
-/* strip the O(…) / Θ(…) / Ω(…) wrapper and expand common shorthand */
-function normalizeNotation(notation) {
-  let s = String(notation || '').toLowerCase().replace(/\s+/g, '');
-  s = s.replace(/^(?:bigo|big-o|o|theta|θ|omega|ω|t)\(/, '').replace(/\)$/, '');
-  s = s.replace(/√/g, 'sqrt')
-       .replace(/²/g, '^2').replace(/³/g, '^3')
-       .replace(/[×·]/g, '*').replace(/[÷]/g, '/')
-       .replace(/\*\*/g, '^');
-  s = s.replace(/log2n/g, 'log2(n)')
-       .replace(/log2/g, 'log2')
-       .replace(/logn/g, 'log(n)')
-       .replace(/logm/g, 'log')
-       .replace(/sqrtn/g, 'sqrt(n)')
-       .replace(/lnn/g, 'log(n)')
-       .replace(/\bln\b/g, 'log');
-  s = s.replace(/n([0-9]+)/g, 'n^$1'); // n2 → n^2, n4 → n^4 …
-  return s;
-}
-
-function tokenize(s) {
-  const toks = [];
-  let i = 0;
-  while (i < s.length) {
-    const c = s[i];
-    if (c >= '0' && c <= '9') {
-      let j = i;
-      while (j < s.length && /[0-9.]/.test(s[j])) j++;
-      toks.push({ t: 'num', v: parseFloat(s.slice(i, j)) });
-      i = j;
-    } else if (/[a-z]/.test(c)) {
-      let j = i;
-      while (j < s.length && /[a-z0-9]/.test(s[j])) j++;
-      toks.push({ t: 'id', v: s.slice(i, j) });
-      i = j;
-    } else if ('+-*/^!()'.includes(c)) {
-      toks.push({ t: c });
-      i++;
-    } else i++;
+  let path = '', area = '', marker = null;
+  if (ok) {
+    let d = '', dArea = '';
+    for (let k = 0; k <= K; k++) {
+      const lv = (XMAX * k) / K;                 // log10 n from 0..6
+      const y = opsLogAt(f, Math.pow(10, lv)) ?? 0;
+      const yc = Y(y);
+      d += (k ? 'L' : 'M') + X(lv).toFixed(1) + ' ' + yc.toFixed(1) + ' ';
+      dArea += (k ? 'L' : 'M') + X(lv).toFixed(1) + ' ' + yc.toFixed(1) + ' ';
+    }
+    path = d;
+    area = dArea + 'L' + X(XMAX).toFixed(1) + ' ' + Y(0).toFixed(1) + ' L' + X(0).toFixed(1) + ' ' + Y(0).toFixed(1) + ' Z';
+    if (n >= 1) {
+      const y = opsLogAt(f, n) ?? 0;
+      marker = { x: X(Math.log10(Math.min(n, 1e6))), y: Y(y) };
+    }
   }
-  return toks;
-}
 
-/* insert * between adjacent operands (n log(n) → n * log(n)), but keep id( as a call */
-function insertImplicitMul(toks) {
-  const out = [];
-  for (const t of toks) {
-    if (out.length) {
-      const p = out[out.length - 1].t;
-      const operand = t.t === 'id' || t.t === 'num' || t.t === '(';
-      const prevOp = p === 'num' || p === 'id' || p === ')';
-      const isCall = p === 'id' && t.t === '(';
-      if (prevOp && operand && !isCall) out.push({ t: '*' });
-    }
-    out.push(t);
-  }
-  return out;
-}
+  const refY = Y(7); // 10^7 ops ≈ 1 second
+  const gridYs = [0, 6, 12, 18];
+  const gridXs = [0, 3, 6];
+  const gid = 'cxg' + (label === 'Time' ? 't' : 's') + color.replace('#', '');
+  const cur = ok ? (opsLogAt(f, n) ?? null) : null;
+  const grade = opsGrade(cur);
 
-function compileExpr(src) {
-  const toks = insertImplicitMul(tokenize(src));
-  if (!toks.length) return null;
-  let i = 0;
-
-  const idValue = id => {
-    switch (id) {
-      case 'log': case 'log2': case 'ln': return n => Math.log2(Math.max(n, 1));
-      case 'sqrt': return n => Math.sqrt(Math.max(n, 0));
-      case 'c': case 'const': case 'one': case 'k': return () => 1;
-      default: return n => n; // unknown identifier → assume it scales with n
-    }
-  };
-
-  const parseExpr = () => {
-    let v = parseTerm();
-    while (i < toks.length && (toks[i].t === '+' || toks[i].t === '-')) {
-      const op = toks[i++].t;
-      const r = parseTerm();
-      const lv = v;
-      v = n => (op === '+' ? lv(n) + r(n) : lv(n) - r(n));
-    }
-    return v;
-  };
-  const parseTerm = () => {
-    let v = parseFactor();
-    while (i < toks.length && (toks[i].t === '*' || toks[i].t === '/')) {
-      const op = toks[i++].t;
-      const r = parseFactor();
-      const lv = v;
-      v = n => (op === '*' ? lv(n) * r(n) : lv(n) / Math.max(r(n), 1e-9));
-    }
-    return v;
-  };
-  const parseFactor = () => {
-    let base = parsePow();
-    while (i < toks.length && toks[i].t === '!') {
-      i++;
-      const b = base;
-      base = n => factorial(Math.max(0, Math.min(Math.round(Math.abs(b(n))), 170)));
-    }
-    return base;
-  };
-  const parsePow = () => {
-    const base = parsePrimary();
-    if (i < toks.length && toks[i].t === '^') {
-      i++;
-      const exp = parsePow();
-      return n => Math.pow(base(n), exp(n));
-    }
-    return base;
-  };
-  const parsePrimary = () => {
-    if (i >= toks.length) return () => 1;
-    const tk = toks[i];
-    if (tk.t === 'num') { i++; return () => tk.v; }
-    if (tk.t === 'id') {
-      i++;
-      if (i < toks.length && toks[i].t === '(') {
-        i++;
-        const arg = parseExpr();
-        if (i < toks.length && toks[i].t === ')') i++;
-        const name = tk.v;
-        return n => {
-          if (name === 'log' || name === 'log2' || name === 'ln') return Math.log2(Math.max(arg(n), 1e-9));
-          if (name === 'sqrt') return Math.sqrt(Math.max(arg(n), 0));
-          return arg(n);
-        };
-      }
-      return idValue(tk.v);
-    }
-    if (tk.t === '(') {
-      i++;
-      const v = parseExpr();
-      if (i < toks.length && toks[i].t === ')') i++;
-      return v;
-    }
-    i++;
-    return () => 1;
-  };
-
-  const root = parseExpr();
-  if (i !== toks.length) return null; // couldn't consume everything → unknown form
-  return root;
-}
-
-/* notation → normalized curve (0..1) on a LOG y-axis, so fast-growing forms
-   (n^4, 2^n, n!…) stay visible instead of hugging the baseline.
-   null = unparseable (caller falls back). */
-export function growthCurve(notation) {
-  const f = compileExpr(normalizeNotation(notation));
-  if (!f) return null;
-  const vals = [];
-  for (let n = 1; n <= N_MAX; n++) {
-    let v;
-    try { v = f(n); } catch { v = 0; }
-    if (!isFinite(v) || v < 0) v = 0;
-    vals.push(Math.log1p(v));
-  }
-  const max = Math.max(...vals, 1e-9);
-  return vals.map(v => Math.min(v / max, 1));
-}
-
-function Sparkline({ notation, color, label }) {
-  const pts = growthCurve(notation) || Array(N_MAX).fill(0.5);
-  const gid = 'g' + useId().replace(/[^a-zA-Z0-9]/g, '');
-  const W = 210, H = 64, pad = 6;
-  const step = (W - pad * 2) / (pts.length - 1);
-  const coords = pts.map((v, i) => [pad + i * step, H - pad - v * (H - pad * 2)]);
-  const path = coords.map(([x, y], i) => (i === 0 ? `M${x.toFixed(1)},${y.toFixed(1)}` : `L${x.toFixed(1)},${y.toFixed(1)}`)).join(' ');
-  const area = `${path} L${(pad + (pts.length - 1) * step).toFixed(1)},${H - pad} L${pad},${H - pad} Z`;
   return (
-    <div className="n-spark" title={`${label}: ${notation}`}>
+    <div className="n-cx-panel">
+      <div className="n-cx-title">
+        <span className="n-cx-dot" style={{ background: color }} />
+        <b>{label}</b>
+        <code className="n-cx-notation">{notation}</code>
+        <span className={`n-cx-grade ${grade ? grade.cls : ''}`}>{grade ? grade.txt : ''}</span>
+      </div>
+
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${label} growth chart for ${notation}`}>
         <defs>
           <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.5" />
+            <stop offset="0%" stopColor={color} stopOpacity="0.45" />
             <stop offset="100%" stopColor={color} stopOpacity="0.02" />
           </linearGradient>
         </defs>
-        <line x1={pad} y1={H - pad} x2={W - pad} y2={H - pad} stroke="rgba(255,255,255,.14)" />
-        <path d={area} fill={`url(#${gid})`} />
-        <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <text x={W - pad} y={H - 1} textAnchor="end" fontSize="7" fill="rgba(255,255,255,.4)">n →</text>
-        <text x={pad + 1} y={9} fontSize="7" fill="rgba(255,255,255,.4)">growth (log) ↑</text>
+        {gridYs.map(y => (
+          <g key={'gy' + y}>
+            <line x1={L} y1={Y(y)} x2={W - R} y2={Y(y)} stroke="rgba(255,255,255,.09)" strokeDasharray="3 5" />
+            <text x={L - 5} y={Y(y) + 3} textAnchor="end" fontSize="8" fill="rgba(255,255,255,.45)">10{y === 0 ? '⁰' : '^' + y}</text>
+          </g>
+        ))}
+        {gridXs.map(x => (
+          <text key={'gx' + x} x={X(x)} y={H - 9} textAnchor="middle" fontSize="8" fill="rgba(255,255,255,.45)">
+            {x === 0 ? '1' : x === 3 ? '10³' : '10⁶'}
+          </text>
+        ))}
+        <line x1={X(0)} y1={Y(0)} x2={X(XMAX)} y2={Y(0)} stroke="rgba(255,255,255,.28)" />
+        <line x1={X(0)} y1={T} x2={X(0)} y2={Y(0)} stroke="rgba(255,255,255,.18)" />
+        <line x1={L} y1={refY} x2={W - R} y2={refY} stroke="rgba(255,255,255,.5)" strokeDasharray="5 4" />
+        <text x={W - R} y={refY - 3} textAnchor="end" fontSize="8" fill="rgba(255,255,255,.55)">10⁷ ops ≈ 1 s</text>
+
+        {area && <path d={area} fill={`url(#${gid})`} />}
+        {path && <path d={path} fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />}
+        {marker && (
+          <g>
+            <line x1={marker.x} y1={Y(0)} x2={marker.x} y2={T} stroke={color} strokeOpacity=".35" strokeDasharray="2 3" />
+            <circle cx={marker.x} cy={marker.y} r="3.4" fill={color} stroke="#0b0b0f" strokeWidth="1.5" />
+          </g>
+        )}
+        {!ok && <text x={L + pw / 2} y={T + ph / 2} textAnchor="middle" fontSize="10" fill="rgba(255,255,255,.4)">couldn't parse — showing guide</text>}
       </svg>
-      <div className="n-spark-cap"><b style={{ color }}>{label}</b><span>{notation}</span></div>
+
+      <div className="n-cx-readout">
+        <span>ops <b>{fmtOps(cur)}</b></span>
+        <span>@10⁷/s <b>{fmtDur(ok && cur != null ? Math.pow(10, cur) : null)}</b></span>
+      </div>
     </div>
   );
 }
 
 export function ComplexityBlock({ time, space }) {
-  if (!time && !space) return null;
+  const [n, setN] = useState(100000); // 10^5 default
+  const nToV = nn => (nn <= 1 ? 0 : Math.log10(Math.min(nn, 1e6)));
+  const vToN = v => (v <= 0 ? 1 : Math.round(Math.pow(10, v)));
+
   return (
     <details className="n-block n-block-cx" open>
       <summary>📈 Time &amp; Space complexity</summary>
-      <div className="n-cx-grid">
-        {time ? <Sparkline notation={time} color="#fb923c" label="Time" /> : <div className="n-spark" />}
-        {space ? <Sparkline notation={space} color="#38bdf8" label="Space" /> : <div className="n-spark" />}
+
+      <div className="n-cx-slider">
+        <div className="n-cx-slider-h">
+          <span>input size <b>n = {fmtN(n)}</b> elements</span>
+          <span className="n-cx-slider-sub">drag to see how ops grow (log scale, 1 → 10⁶)</span>
+        </div>
+        <input
+          type="range" className="n-range" min="0" max="6" step="0.01"
+          value={nToV(n)}
+          onChange={e => setN(vToN(parseFloat(e.target.value)))}
+          aria-label="input size"
+        />
+        <div className="n-range-ticks">
+          <span>1</span><span>10</span><span>10²</span><span>10³</span><span>10⁴</span><span>10⁵</span><span>10⁶</span>
+        </div>
+        <div className="n-cx-zero">n = 0 → nothing to process (0 ops)</div>
       </div>
+
+      <div className="n-cx-grid">
+        {time && <ComplexityChart notation={time} color="#fb923c" label="Time" n={n} />}
+        {space && <ComplexityChart notation={space} color="#38bdf8" label="Space" n={n} />}
+      </div>
+
       <div className="n-cx-badges">
         {time && <span className="n-badge">⏱ Time <b>{time}</b></span>}
         {space && <span className="n-badge">💾 Space <b>{space}</b></span>}

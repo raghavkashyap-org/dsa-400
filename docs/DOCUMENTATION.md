@@ -17,7 +17,7 @@ full deep-dive in [§5](#5-the-article-system-deep-dive).
 |---|---|---|---|
 | **DSA·400 Tracker** | `/`, `/questions`, `/profile`, `/onboarding`, `/file` | Emerald + dark only | 400-day plan, chain, calendar, certificate |
 | **Pattern Master** | `/patterns` | Cyan + dark only | 40-pattern playbook, preserved from `dsa_Patterns_new.html` |
-| **Daily Coding Articles** | `/note`, `/note/:slug`, `/notes` | Orange + dark only | Markdown authoring, GitHub sources, versioned JSON |
+| **Daily Coding Articles** | `/note`, `/note/:username/:slug`, `/notes` | Orange + dark only | Markdown authoring, GitHub sources, versioned JSON |
 
 All three are **dark-mode only**, with **no theme switcher** (by design).
 Theming is hand-rolled CSS custom properties (`styles.css`) — **no Tailwind**.
@@ -36,7 +36,7 @@ Theming is hand-rolled CSS custom properties (`styles.css`) — **no Tailwind**.
 | `/patterns` | signed-in | Pattern Master |
 | `/hash/:hash` | see §6 | Commitment verification (owner vs public) |
 | `/note` | signed-in | **Article editor** (single draft) |
-| `/note/:slug` | public | Published article (read-only) |
+| `/note/:username/:slug` | public | Published article (read-only, username-scoped) |
 | `/notes` | signed-in | **Article management** (list / edit / delete / download) |
 | `/file` | signed-in | Raw append-only event ledger (JSON export) |
 
@@ -110,7 +110,10 @@ detect old payload shapes.
     headers / `std::`, Java, Python, JS; bracket matching with orange highlight; multi-cursor;
     optional Piston "▶ Run"). Editing code inside the preview **syncs back to the Markdown
     source** (`handleFenceChange`, using token source maps).
-  - **YouTube**: `[Title](://youtube.com/watch?v=ID)` → embedded player.
+  - **YouTube**: `[Title](://youtube.com/watch?v=ID)` → embedded player. The author
+    controls playback via **🎛 Video settings** (autoplay, loop, start-at, mute) stored
+    in the payload's `video` object; the embed always keeps the user's **controls
+    visible** (`controls=1`).
   - **Timestamps**: `[12:34]` / `[1:02:03]` → clickable chips that seek the video
     (window event `dsa400:seek` + `postMessage`).
   - Standard Markdown: headings (styled with an orange bar), bold/italic, quotes,
@@ -137,12 +140,15 @@ Supabase). Republishing overwrites it (same slug).
 
 ```json
 {
-  "slug": "two-pointers-day-7",
+  "slug": "day-7",
+  "username": "raghav",
+  "authorName": "raghav",
   "title": "Two Pointers — Day 7",
   "date": "2026-09-04",
   "dayStreak": 7,
   "tags": ["DSA", "Two Pointers"],
   "videoUrl": "https://youtube.com/watch?v=…",
+  "video": { "autoplay": false, "loop": false, "start": 0, "mute": false },
   "githubUrl": "https://github.com/…/835-image-overlap",
   "contentMarkdown": "# …",
   "blocks": { "example": {…}, "complexity": {…}, "pattern": "…", "mistakes": "…" },
@@ -152,9 +158,14 @@ Supabase). Republishing overwrites it (same slug).
 ```
 
 - Saved **always** locally (key `dsa400-articles-v1`) — works in demo mode.
-- **Upserted** into Supabase `articles` when configured (owner row). Supabase column
-  mapping is the table in §4.
-- `blocks` is omitted (`null`) when empty, so **v1 articles stay byte-compatible**.
+- **Upserted** into Supabase `articles` when configured (owner row, `onConflict:
+  username,slug`). Supabase column mapping is the table in §4.
+- **`username` scoping**: the public route is `/note/{username}/{slug}`, and the
+  table is unique on `(username, slug)` — so two users can both publish a
+  `day-7` without colliding. `username` is the URL-safe form of the author's
+  display name (`userSlug()`), `authorName` is the human-readable form.
+- `blocks`/`video` are omitted (`null`) when empty, so **v1 articles stay
+  byte-compatible**.
 - **`schemaVersion` is mandatory** and pinned to `ARTICLE_SCHEMA_VERSION = 2`.
 
 ### 5.4 Schema versioning
@@ -171,7 +182,7 @@ Supabase). Republishing overwrites it (same slug).
 | Key | Shape | Render |
 |---|---|---|
 | `example` | `{ input, output, explanation }` | two code boxes (green "OUTPUT" tag) + explanation |
-| `complexity` | `{ time, space }` | big-O badges **+ sparkline growth charts** (time = orange `#fb923c`, space = sky `#38bdf8`) on a **log y-axis**. Any notation is parsed dynamically — `O(n^4)`, `O(n log n)`, `O(n²+m)`, `O(2^n)`, `O(n!)`, `O(√n)`, `O(log n)`, `O(1)`, `O(n·m)`… — so a chart always exists for whatever you type; unparseable strings fall back to a flat guide. |
+| `complexity` | `{ time, space }` | big-O badges **+ an interactive growth panel**. A **log-scale slider** sweeps the input size `n` from 1 → 10⁶ and each of Time (orange `#fb923c`) and Space (sky `#38bdf8`) is plotted on **shared log–log axes** (x = log₁₀ n, y = log₁₀ ops, 10⁰–10¹⁸) with a `10⁷ ops ≈ 1 s` reference line — so `O(n)`, `O(n²)`, `O(n⁴)`, `O(2ⁿ)`, `O(n!)` are all visibly different slopes. A live readout shows **operations** and **time @ 10⁷ ops/s** at the current `n`, with a green/yellow/red grade. Any notation is parsed dynamically (`O(n^4)`, `O(n log n)`, `O(n²+m)`, `O(n·m)`, …); unparseable strings degrade gracefully. |
 | `pattern` | string | "Pattern recognition" freetext block |
 | `mistakes` | string (optional) | warning-styled block |
 
@@ -202,10 +213,23 @@ and extracts `{owner, repo, branch, path}`.
    GitHub contents API (fallback: any code files linked from the README).
 5. Caches per `owner/repo/branch/path` in memory.
 
-`GitHubSection.jsx` renders: the README (Markdown) + solution file tabs (read-only) +
-the image gallery. **It never overrides user-written code** — if the article's Markdown
-already contains a fenced code block, the section stays collapsed behind a "📦 GitHub
-source" toggle; if there is no user code, it auto-expands.
+`GitHubSection.jsx` renders the README as a **structured problem view** (via
+`readme-parse.js`) instead of a raw Markdown dump:
+
+1. **Title + meta** — difficulty chip (green/amber/red), topic chips, LeetCode link.
+2. **Question statement** — the problem text rendered as Markdown.
+3. **Examples** — each `**Example N:**` becomes a card with its **input / output /
+   explanation** pulled out of the code fence into labelled boxes, and its **images left
+   inline exactly where they appear** (already rewritten to raw.githubusercontent.com).
+4. **Constraints** — rendered as a styled `code` list.
+5. **Extra sections** (e.g. `## Submission`) — rendered as Markdown.
+6. **Solution code** — read-only tabs for the fetched source files.
+7. **Image gallery** — every image collected from the README (`img_1`, `img_2`, …).
+
+It **never overrides user-written code** — if the article's Markdown already contains a
+fenced code block, the section stays collapsed behind a "📦 GitHub source" toggle; if
+there is no user code, it auto-expands. If the README doesn't match the expected
+structure, it falls back to rendering the raw Markdown.
 
 ### 5.7 Pattern reference import
 
@@ -224,23 +248,24 @@ templates / sample walkthrough / practice set) into **plain editable Markdown**.
 slug collision the Supabase row wins, local-only drafts are kept). Each row shows title,
 tags, day streak, IST timestamps, and actions:
 
-- **Open** → `/note/:slug` (public view)
+- **Open** → `/note/:username/:slug` (public view)
 - **Edit** → `/note?edit=:slug`
 - **Download JSON** → the raw payload
 - **Delete** → removes from local + Supabase
 
-### 5.9 Public rendering — `/note/:slug`
+### 5.9 Public rendering — `/note/:username/:slug`
 
-`NoteView.jsx` loads by slug (local → Supabase) and renders, read-only:
+`NoteView.jsx` loads by `(username, slug)` (local → Supabase, username-filtered) and
+renders, read-only:
 
-1. Kicker + **🔥 Day N** streak badge + date.
+1. Kicker + **🔥 Day N** streak badge + author `@username` + date.
 2. Title + tag chips.
-3. Embedded video (if `videoUrl`).
-4. **GitHub source** section (if `githubUrl`) — auto-expanded when the article has no
-   user code.
+3. Embedded video (if `videoUrl`), honouring the author's `video` settings.
+4. **GitHub source** section (if `githubUrl`) — structured problem view, auto-expanded
+   when the article has no user code.
 5. The Markdown body (read-only CodeMirror for code blocks).
-6. The `blocks` (example / complexity charts / pattern / mistakes).
-7. Footer with slug + "IST (Asia/Kolkata)".
+6. The `blocks` (example / interactive complexity panel / pattern / mistakes).
+7. Footer with username/slug + "IST (Asia/Kolkata)".
 
 ### 5.10 Timezone
 

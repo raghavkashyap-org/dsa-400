@@ -317,3 +317,15 @@ alter table public.articles add column if not exists github_url text;
 
 -- v8: structured article blocks (example / complexity / mistakes / pattern)
 alter table public.articles add column if not exists blocks jsonb;
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- v9 additions: username-scoped articles + video settings
+--   public route is /note/:username/:slug so the SAME slug can exist under
+--   different users without colliding. The old slug primary key is dropped in
+--   favour of a unique (username, slug) pair.
+-- ═══════════════════════════════════════════════════════════════════════
+alter table public.articles drop constraint if exists articles_pkey;
+alter table public.articles add column if not exists username    text not null default '';
+alter table public.articles add column if not exists author_name text;
+alter table public.articles add column if not exists video       jsonb;
+create unique index if not exists articles_username_slug_uq on public.articles (username, slug);

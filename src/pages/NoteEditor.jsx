@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, displayName } from '../context/AuthContext';
 import { useTrackerData } from '../hooks/useTrackerData';
 import { TRACKER_DATA } from '../lib/tracker-data';
 import { renderMarkdown, slugify, extractYouTubeId } from '../lib/note-mdx';
@@ -8,7 +8,7 @@ import { VideoEmbed } from '../components/editor/VideoEmbed';
 import GitHubSection from '../components/editor/GitHubSection';
 import ArticleBlocks from '../components/editor/ArticleBlocks';
 import { PATTERNS, getPattern, patternToMarkdown } from '../lib/pattern-md';
-import { publishArticle, loadArticle } from '../lib/articles';
+import { publishArticle, loadArticle, userSlug } from '../lib/articles';
 import { todayIso, formatIST } from '../lib/utils';
 import { toast } from '../lib/toast';
 
@@ -59,6 +59,7 @@ export default function NoteEditor() {
   const [videoUrl, setVideoUrl] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
   const [blocks, setBlocks] = useState({});
+  const [videoSettings, setVideoSettings] = useState({ autoplay: false, loop: false, start: 0, mute: false });
   const [markdown, setMarkdown] = useState('');
   const [view, setView] = useState('split'); // split | write | preview
   const [loaded, setLoaded] = useState(false);
@@ -98,6 +99,7 @@ export default function NoteEditor() {
           setTitle(a.title); setDate(a.date); setDayStreak(a.dayStreak);
           setSlug(a.slug); setTags((a.tags || []).join(', ')); setVideoUrl(a.videoUrl || '');
           setGithubUrl(a.githubUrl || ''); setBlocks(a.blocks || {});
+          setVideoSettings(a.video || { autoplay: false, loop: false, start: 0, mute: false });
           setMarkdown(a.contentMarkdown || '');
           setLoaded(true);
           toast(`Editing <b>${a.title}</b> — republish to save changes.`);
@@ -111,6 +113,7 @@ export default function NoteEditor() {
           setTitle(d.title || ''); setDate(d.date || todayIso()); setDayStreak(d.dayStreak || 0);
           setSlug(d.slug || ''); setTags(d.tags || ''); setVideoUrl(d.videoUrl || '');
           setGithubUrl(d.githubUrl || ''); setBlocks(d.blocks || {});
+          setVideoSettings(d.videoSettings || { autoplay: false, loop: false, start: 0, mute: false });
           draftMd = d.markdown || '';
         } else {
           draftMd = STARTER;
@@ -135,12 +138,12 @@ export default function NoteEditor() {
   useEffect(() => {
     if (!loaded) return;
     const id = setTimeout(() => {
-      const draft = { title, date, dayStreak, slug, tags, videoUrl, githubUrl, blocks, markdown };
+      const draft = { title, date, dayStreak, slug, tags, videoUrl, videoSettings, githubUrl, blocks, markdown };
       try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch {}
       setLastSaved(new Date());
     }, 900);
     return () => clearTimeout(id);
-  }, [loaded, title, date, dayStreak, slug, tags, videoUrl, githubUrl, blocks, markdown]);
+  }, [loaded, title, date, dayStreak, slug, tags, videoUrl, videoSettings, githubUrl, blocks, markdown]);
 
   /* ── window seek event indicator ── */
   useEffect(() => {
@@ -229,13 +232,16 @@ export default function NoteEditor() {
       dayStreak,
       tags: tags.split(',').map(x => x.trim()).filter(Boolean),
       videoUrl: videoUrl.trim() || null,
+      video: videoSettings,
       githubUrl: githubUrl.trim() || null,
       contentMarkdown: markdown,
       blocks,
+      username: userSlug(displayName(user)),
+      authorName: displayName(user),
     }, user?.id);
     setPublished(payload);
     setShowPublish(true);
-    toast(`<b>Published</b> — live at /note/${payload.slug}`);
+    toast(`<b>Published</b> — live at /note/${payload.username}/${payload.slug}`);
   };
   const downloadJson = () => {
     const blob = new Blob([JSON.stringify(published, null, 2)], { type: 'application/json' });
@@ -282,7 +288,30 @@ export default function NoteEditor() {
             <label className="n-field"><span>Main video URL</span><input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=…" /></label>
             <label className="n-field n-field-slug"><span>GitHub problem link</span><input value={githubUrl} onChange={e => setGithubUrl(e.target.value)} placeholder="https://github.com/…/835-image-overlap" /></label>
           </div>
-          <div className="n-meta-hint">public route → <b>/note/{finalSlug}</b> · published articles are read by anyone with the link</div>
+          {videoUrl.trim() && (
+            <details className="n-vid-settings">
+              <summary>🎛 Video settings <span className="n-pane-sub">autoplay · loop · start at · mute — you're in control</span></summary>
+              <div className="n-vid-grid">
+                <label className="n-vid-toggle">
+                  <input type="checkbox" checked={!!videoSettings.autoplay} onChange={e => setVideoSettings({ ...videoSettings, autoplay: e.target.checked })} />
+                  <span>Autoplay <em>(muted — browsers require it)</em></span>
+                </label>
+                <label className="n-vid-toggle">
+                  <input type="checkbox" checked={!!videoSettings.loop} onChange={e => setVideoSettings({ ...videoSettings, loop: e.target.checked })} />
+                  <span>Loop</span>
+                </label>
+                <label className="n-vid-toggle">
+                  <input type="checkbox" checked={!!videoSettings.mute} onChange={e => setVideoSettings({ ...videoSettings, mute: e.target.checked })} />
+                  <span>Start muted</span>
+                </label>
+                <label className="n-vid-toggle n-vid-start">
+                  <span>Start at (seconds)</span>
+                  <input type="number" min="0" value={videoSettings.start || 0} onChange={e => setVideoSettings({ ...videoSettings, start: Math.max(0, +e.target.value || 0) })} />
+                </label>
+              </div>
+            </details>
+          )}
+          <div className="n-meta-hint">public route → <b>/note/{userSlug(displayName(user))}/{finalSlug}</b> · published articles are read by anyone with the link</div>
         </section>
 
         {/* ── toolbar ── */}
@@ -356,7 +385,7 @@ export default function NoteEditor() {
             <div className="n-pane">
               <header className="n-pane-h">Live preview {seekMsg && <span className="n-seek">{seekMsg}</span>}</header>
               <div className="n-preview">
-                {mainVideoId && <VideoEmbed videoId={mainVideoId} title="Main video" />}
+                {mainVideoId && <VideoEmbed videoId={mainVideoId} title="Main video" opts={videoSettings} />}
                 {renderMarkdown(markdown, { onFenceChange: handleFenceChange }) || <p className="n-empty">Start writing…</p>}
                 <ArticleBlocks blocks={blocks} />
               </div>
@@ -418,7 +447,7 @@ export default function NoteEditor() {
               <div>
                 <b>✅ Published — “{published.title}”</b>
                 <div className="n-pane-sub">
-                  <a className="n-link" href={`/note/${published.slug}`} target="_blank" rel="noopener noreferrer">open /note/{published.slug} →</a>
+                  <a className="n-link" href={`/note/${published.username}/${published.slug}`} target="_blank" rel="noopener noreferrer">open /note/{published.username}/{published.slug} →</a>
                   {' '}· <Link className="n-link" to="/notes">manage my articles</Link>
                 </div>
               </div>

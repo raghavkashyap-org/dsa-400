@@ -8,15 +8,15 @@ import ArticleBlocks from '../components/editor/ArticleBlocks';
 import { pretty } from '../lib/utils';
 
 export default function NoteView() {
-  const { slug } = useParams();
+  const { username, slug } = useParams();
   const [art, setArt] = useState(null);
   const [status, setStatus] = useState('loading'); // loading | ok | notfound
 
   useEffect(() => {
     let alive = true;
-    loadArticle(slug).then(a => { if (alive) { setArt(a); setStatus(a ? 'ok' : 'notfound'); } });
+    loadArticle(slug, username).then(a => { if (alive) { setArt(a); setStatus(a ? 'ok' : 'notfound'); } });
     return () => { alive = false; };
-  }, [slug]);
+  }, [slug, username]);
 
   const videoId = useMemo(() => (art && art.videoUrl ? extractYouTubeId(art.videoUrl) : null), [art]);
   const hasUserCode = useMemo(() => art ? /```/.test(art.contentMarkdown || '') : false, [art]);
@@ -29,7 +29,7 @@ export default function NoteView() {
       <div className="n-page" data-theme="orange">
         <main className="n-shell" style={{ textAlign: 'center', padding: '80px 20px' }}>
           <h1 style={{ color: 'var(--no-400)' }}>Article not found</h1>
-          <p className="n-empty">No published note matches “{slug}”.</p>
+          <p className="n-empty">No published note matches “/{username}/{slug}”.</p>
           <Link className="n-btn n-btn-primary" to="/note" style={{ display: 'inline-flex' }}>Write your own →</Link>
         </main>
       </div>
@@ -51,6 +51,7 @@ export default function NoteView() {
       <main className="n-shell n-article">
         <div className="n-art-meta">
           <span className="n-streak">🔥 Day {art.dayStreak}</span>
+          {art.authorName && <span className="n-chip">@{art.authorName}</span>}
           <span className="n-art-date">{pretty(art.date)}</span>
         </div>
         <h1 className="n-art-title">{art.title}</h1>
@@ -58,7 +59,7 @@ export default function NoteView() {
           <div className="n-tags">{art.tags.map((t, i) => <span key={i} className="n-chip">{t}</span>)}</div>
         )}
 
-        {videoId && <VideoEmbed videoId={videoId} title={art.title} />}
+        {videoId && <VideoEmbed videoId={videoId} title={art.title} opts={art.video || {}} />}
 
         {art.githubUrl && (
           <div style={{ marginBottom: 14 }}>

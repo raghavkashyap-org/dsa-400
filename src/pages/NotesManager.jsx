@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { listArticles, deleteArticle } from '../lib/articles';
+import { useAuth, displayName } from '../context/AuthContext';
+import { listArticles, deleteArticle, userSlug } from '../lib/articles';
 import { formatIST, pretty } from '../lib/utils';
 import { toast } from '../lib/toast';
 
@@ -11,17 +11,20 @@ export default function NotesManager() {
   const nav = useNavigate();
   const [items, setItems] = useState(null);
   const [busy, setBusy] = useState(false);
+  const username = userSlug(displayName(user));
 
   useEffect(() => {
     let alive = true;
-    listArticles(user?.id).then(l => { if (alive) setItems(l); });
+    listArticles(user?.id, username).then(l => { if (alive) setItems(l); });
     return () => { alive = false; };
-  }, [user?.id]);
+  }, [user?.id, username]);
+
+  const artLink = a => `/note/${encodeURIComponent(a.username || username || '_')}/${encodeURIComponent(a.slug)}`;
 
   const doDelete = async a => {
     if (!window.confirm(`Delete “${a.title}”? This cannot be undone.`)) return;
     setBusy(true);
-    await deleteArticle(a.slug);
+    await deleteArticle(a.slug, a.username || username);
     setItems(items.filter(x => x.slug !== a.slug));
     setBusy(false);
     toast(`<b>Deleted</b> ${a.title}.`);
@@ -69,19 +72,19 @@ export default function NotesManager() {
               <article className="n-list-item" key={a.slug}>
                 <div className="n-list-main">
                   <div className="n-list-title">
-                    <Link to={`/note/${a.slug}`}>{a.title}</Link>
+                    <Link to={artLink(a)}>{a.title}</Link>
                     {!a.isPublished && <span className="n-chip">draft</span>}
                   </div>
                   <div className="n-list-sub">
                     <span className="n-streak">🔥 Day {a.dayStreak}</span>
                     <span>📅 {pretty(a.date)}</span>
-                    <span className="cx">/{a.slug}</span>
+                    <span className="cx">/note/{a.username || '_'}/{a.slug}</span>
                     {a.tags && a.tags.length > 0 && <span>{a.tags.join(' · ')}</span>}
                   </div>
                   {a.updatedAt && <div className="n-list-upd">updated {formatIST(a.updatedAt)} (IST)</div>}
                 </div>
                 <div className="n-list-actions">
-                  <a className="n-btn n-btn-ghost n-btn-sm" href={`/note/${a.slug}`} target="_blank" rel="noopener noreferrer">open ↗</a>
+                  <a className="n-btn n-btn-ghost n-btn-sm" href={artLink(a)} target="_blank" rel="noopener noreferrer">open ↗</a>
                   <button className="n-btn n-btn-ghost n-btn-sm" onClick={() => nav(`/note?edit=${encodeURIComponent(a.slug)}`)}>edit</button>
                   <button className="n-btn n-btn-ghost n-btn-sm" onClick={() => downloadJson(a)}>json</button>
                   <button className="n-btn n-btn-danger n-btn-sm" disabled={busy} onClick={() => doDelete(a)}>delete</button>

@@ -61,7 +61,7 @@ One **React (Vite) + Supabase** website that merges two projects into a single p
 | `/patterns` | signed-in | **Pattern Master** (40 patterns, cyan theme) |
 | `/hash/:hash` | see below | Commitment verification (owner vs public) |
 | `/note` | signed-in | **Daily Coding Article & Note Page** (orange/ember theme) |
-| `/note/:slug` | public | Published article (read-only, rendered from Markdown + JSON) |
+| `/note/:username/:slug` | public | Published article (read-only, username-scoped) |
 | `/file` | signed-in | Raw append-only event ledger (JSON export) |
 
 ---
@@ -126,7 +126,7 @@ username, and the `DSA400xxxxxxx` commitment-id.
 The login page and the verification page show a **fresh quote on every visit**
 (consistency / goals / discipline).
 
-### Daily Coding Article & Note Page (`/note`, `/note/:slug`)
+### Daily Coding Article & Note Page (`/note`, `/note/:username/:slug`)
 An "Orange / Ember" themed (`data-theme="orange"`, amber `#fb923c / #f97316 / #ea580c`
 on zinc/slate dark) article authoring system, redesigned after the frontend design system
 (floating pill nav, animated orbs/grid background, glass cards, orange glow, **full-width**
@@ -153,10 +153,11 @@ workspace — deliberately *not* a traditional narrow note editor; dark mode onl
 Beyond the Markdown body, an article can carry structured blocks (stored as optional JSON,
 so old v1 articles render unchanged):
 - **📌 Example** — input / output / explanation, styled as separate code boxes.
-- **📈 Time & Space complexity** — big-O badges plus **small growth sparkline charts**
-  for both time and space, in a collapsible block. Any notation is **parsed dynamically**
-  (e.g. `O(n^4)`, `O(n log n)`, `O(2^n)`, `O(n!)`) and plotted on a log y-axis — so there
-  is always a chart for whatever complexity you type, never a fixed set of curves.
+- **📈 Time & Space complexity** — big-O badges plus an **interactive growth panel**: a
+  **log-scale slider** sweeps `n` from 1 → 10⁶ and each of Time/Space is plotted on
+  **shared log–log axes** with a `10⁷ ops ≈ 1 s` reference line, so `O(n)`, `O(n²)`,
+  `O(n⁴)`, `O(2ⁿ)`, `O(n!)` look genuinely different. A live readout shows **operations
+  & time @ 10⁷ ops/s** at the current `n`, graded fast/seconds/too-slow.
 - **🧩 Pattern recognition** — free-text block.
 - **⚠️ Mistakes I made** — optional, styled as a warning block.
 
@@ -169,7 +170,10 @@ so old v1 articles render unchanged):
   `assets/img_1.jpg`, `img_2`, `img_3`, … — is rewritten to an absolute
   `raw.githubusercontent.com` URL, and **every image in the README is collected and shown
   as a thumbnail gallery** (`img_1`, `img_2`, …).
-- The README is rendered as Markdown in-page; solution files show as read-only code tabs.
+- The README is parsed into a **structured problem view** — title/difficulty/topics, the
+  question statement, each example with its **input / output / explanation** and images
+  left inline, the **constraints** list, and any extra sections — rather than a raw
+  Markdown dump. Solution files show as read-only code tabs.
 - **Never overrides your code**: if the article already has a code block, the GitHub
   solution stays behind a "📦 GitHub source" toggle; if you wrote no code, it expands
   automatically.
@@ -189,6 +193,13 @@ so old v1 articles render unchanged):
 - The complete original `dsa_Patterns_new.html` content, preserved verbatim behind `/patterns`.
 - Cyan theme (the only non-emerald page), dark mode, no theme switcher.
 - Cross-links `📌 Day N` into the DSA-400 plan and back.
+- **06 · Pattern recognition** — the LeetCode Pattern Recognition Cheat Sheet: a 4-step
+  flow (check constraints → read input → read output → keyword scan) mapping problems to
+  patterns, rendered as cards/chips. Contributed by **Bitflip**.
+- **07 · Prefix trees** — the Ultimate Guide to Prefix Trees (Tries): Insert / Search /
+  StartsWith / Get-All-Words, keywords & indicators, complexity, a 9-problem practice
+  roadmap (with `📌 Day N` links) and full **Python + Java** implementations. Contributed
+  by **Bitflip**.
 
 ---
 
@@ -239,7 +250,7 @@ prj-dsa/
     │   └── patterns-data.js   # the 40-pattern Pattern Master content
     ├── pages/                 # Login, Register, Onboarding, Tracker, Patterns,
     │                          # Commitment (/hash), Ledger (/file), Profile, Questions,
-    │                          # NoteEditor (/note), NoteView (/note/:slug),
+    │                          # NoteEditor (/note), NoteView (/note/:username/:slug),
     │                          # NotesManager (/notes)
     └── components/            # Nav, Chain, SearchModal, TodayPanel, CalendarPanel,
                                # PlanPanel, ProgressPanel, CommitmentCard

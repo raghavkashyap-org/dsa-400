@@ -9,6 +9,7 @@ const HL = (() => {
   const KW = {
     cpp: 'alignas alignof and asm auto bool break case catch char char8_t char16_t char32_t class concept const consteval constexpr constinit const_cast continue co_await co_return co_yield decltype default delete do double dynamic_cast else enum explicit export extern false float for friend goto if inline int long mutable namespace new noexcept nullptr operator or private protected public register reinterpret_cast requires return short signed sizeof static static_assert static_cast struct switch template this thread_local throw true try typedef typeid typename union unsigned using virtual void volatile wchar_t while',
     java: 'abstract assert boolean break byte case catch char class const continue default do double else enum extends final finally float for goto if implements import instanceof int interface long native new package private protected public return short static strictfp super switch synchronized this throw throws transient try var void volatile while true false null record sealed',
+    python: 'and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield True False None self',
   };
   const TYPES = /\b(?:u?int(?:8|16|32|64|128)?(?:_t)?|size_t|ssize_t|ptrdiff_t|uint|int|float|double|bool|char|void|str|String|Vec|Box|List|Map|Set|Queue|Stack|PriorityQueue|HashMap|HashSet|unordered_map|unordered_set|pair|vector|TreeNode|ListNode|TrieNode|Trie|State|Choice|Choices|Results|Result|Element|Input|Self|byte)\b/g;
   const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -33,7 +34,7 @@ const HL = (() => {
   }
   function highlight(code, lang) {
     lang = (lang || 'text').toLowerCase();
-    if (lang === 'cpp' || lang === 'java') return esc(generic(code, lang)).replace(/\u0001([\w-]+)\u0002/g, '<span class="$1">').replace(/\u0003/g, '</span>');
+    if (lang === 'cpp' || lang === 'java' || lang === 'python' || lang === 'py') return esc(generic(code, lang)).replace(/\u0001([\w-]+)\u0002/g, '<span class="$1">').replace(/\u0003/g, '</span>');
     return esc(code);
   }
   return { highlight, esc };
@@ -43,6 +44,171 @@ const pad2 = n => (n < 10 ? '0' : '') + n;
 const LCX = { 15: '3sum', 74: 'search-a-2d-matrix', 92: 'reverse-linked-list-ii', 167: 'two-sum-ii-input-array-is-sorted', 191: 'number-of-1-bits', 240: 'search-a-2d-matrix-ii', 518: 'coin-change-ii', 876: 'middle-of-the-linked-list', 643: 'maximum-average-subarray-i', 2266: 'count-number-of-texts', 130: 'surrounded-regions', 133: 'clone-graph' };
 const lcSlug = title => LCX[title] || String(title).toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, '-');
 const lcURL = (id, title) => 'https://leetcode.com/problems/' + lcSlug(title) + '/';
+
+/* ═══════════ Pattern Recognition Cheat Sheet (contributed by Bitflip) ═══════════ */
+const PR_CONSTRAINTS = [
+  { t: 'Small n (≤ 20)', tag: 'SMALL', cls: 'ok', items: ['Brute-force approaches are viable', 'Backtracking & recursion', 'Exponential time (2ⁿ, n!) acceptable', 'Try all combinations / permutations'] },
+  { t: 'Medium n (10³ → 10⁶)', tag: 'MEDIUM', cls: 'warn', items: ['No brute force', 'Linear O(n) or O(n log n) solutions', 'Greedy algorithms', 'Two pointers', 'Heap-based solutions', 'Dynamic programming'] },
+  { t: 'Large n (≥ 10⁷)', tag: 'LARGE', cls: 'err', items: ['No linear-time solutions', 'O(log n) only', 'Binary search', 'Mathematical formulas', 'O(1) constant time'] },
+];
+const PR_INPUT = [
+  { t: 'Tree / Binary Tree / BST', items: ['Tree traversal (DFS/BFS)', 'DFS for all paths, recursive exploration, pre/in/postorder', 'BFS for level-by-level & shortest path in unweighted tree', 'Tree properties, parent-child relationships'] },
+  { t: 'Graph (nodes + edges)', items: ['BFS for shortest path', 'DFS for connected components', 'Union-Find for “connected components” / “number of groups”', 'Topological sort for dependencies'] },
+  { t: '2D Grid / Matrix', items: ['DFS/BFS for “islands” problems', 'Union-Find for connected regions', 'DP for path problems', 'Consider 4- or 8-directional movement'] },
+  { t: 'Sorted Array', items: ['Two pointers technique', 'Binary search', 'Greedy approach'] },
+  { t: 'String', items: ['Two pointers for palindromes', 'Sliding window for substrings', 'Trie for word problems', 'Stack for parentheses/brackets'] },
+  { t: 'Linked List', items: ['Two pointers (fast/slow)', 'Dummy node techniques', 'Cycle detection'] },
+];
+const PR_OUTPUT = [
+  { t: 'List of Lists', d: 'combinations · subsets · paths', items: ['Backtracking is almost always the answer', 'Generate all possibilities', 'Recursion with the choice/no-choice pattern'] },
+  { t: 'Single Number', d: 'max/min · profit · cost · ways · jumps', items: ['Dynamic programming for optimization', 'Greedy for local optimal choices', 'Math for counting'] },
+  { t: 'Modified Array / String', d: 'in-place operations', items: ['Two Pointers for in-place modifications'] },
+  { t: 'Ordered List', d: 'sorted sequence · valid task order', items: ['Sorting with custom comparators', 'Topological sort for dependencies', 'Heap for maintaining order'] },
+];
+const PR_KEYWORDS = [
+  ['Dynamic Programming', ['“number of ways”', '“maximum / minimum” + sum/profit/cost', '“can you reach”', '“longest/shortest subsequence”', '“optimal” / “best”']],
+  ['Two Pointers', ['“palindrome”', '“sorted array”', '“target sum”', '“remove duplicates”']],
+  ['Heap', ['“K largest” / “K smallest”', '“top K elements”', '“median”', '“priority”']],
+  ['Stack', ['“parentheses” / “brackets”', '“valid expression”', '“nested structure”', '“undo operations”']],
+  ['Monotonic Stack', ['“next greater element”', '“next smaller element”']],
+  ['HashMap', ['“count frequency”', '“find duplicates”', '“anagram”']],
+  ['Trie', ['“word search”', '“word prefixes”']],
+  ['Greedy', ['“minimum operations”']],
+  ['Union Find', ['“connected components”', '“number of groups”']],
+  ['Binary Search', ['“Kth element”', '“search in sorted”', '“minimize maximum”', '“first/last occurrence”']],
+  ['Bit Manipulation', ['“XOR” operations', '“single number”', '“power of 2”']],
+  ['Math / Geometry', ['“GCD”', '“prime numbers”', '“angle calculations”', '“coordinate”']],
+  ['Game Theory', ['“optimal strategy”', '“win/lose scenarios”', '“minimax”']],
+  ['Sliding Window', ['“substring” with conditions', '“subarray” fixed/variable size', '“maximum/minimum window”', '“contains all”']],
+];
+
+/* ═══════════ Tries deep dive (contributed by Bitflip) ═══════════ */
+const TRIES_FUNCS = [
+  { t: 'Insert', d: 'Start at the root and move through each character. If a letter’s node doesn’t exist yet, create it. When you reach the last character, mark that node as the end of a word (endOfWord = True).' },
+  { t: 'Search', d: 'Start at the root and move down letter by letter. If a letter doesn’t exist, return False. If you reach the last node, return whether endOfWord is True.' },
+  { t: 'StartsWith', d: 'Similar to search, but we don’t care about endOfWord — if all prefix characters exist, return True.' },
+  { t: 'Get All Words (DFS)', d: 'Navigate to the given prefix node, then recursively explore every branch below it. Each node marked endOfWord is a full word.' },
+];
+const TRIES_KEYWORDS = ['“prefix”', '“autocomplete”', '“dictionary”', '“starts with”', '“suggest words”', '“spell checker”', '“search engine”', '“word search”'];
+const TRIES_PRACTICE = [
+  [208, 'Implement Trie (Prefix Tree)', 'start here'],
+  [211, 'Design Add and Search Words Data Structure', 'wildcard support (.)'],
+  [212, 'Word Search II', 'combine DFS with Trie for board searches'],
+  [648, 'Replace Words', 'find root prefixes to replace words in a sentence'],
+  [676, 'Implement Magic Dictionary', 'Trie + character substitution logic'],
+  [745, 'Prefix and Suffix Search', 'advanced usage (two-trie / suffix-trie)'],
+  [1268, 'Search Suggestions System', 'autocomplete results sorted lexicographically'],
+  [472, 'Concatenated Words', 'Trie + recursion to detect compound words'],
+  [336, 'Palindrome Pairs', 'Trie + palindrome checking'],
+];
+const TRIES_PY = `class TrieNode:
+    def __init__(self):
+        self.children = {}
+        self.end_of_word = False
+
+    def insert(self, word: str):
+        node = self
+        for c in word:
+            if c not in node.children:
+                node.children[c] = TrieNode()
+            node = node.children[c]
+        node.end_of_word = True
+
+    def search(self, word: str) -> bool:
+        node = self
+        for c in word:
+            if c not in node.children:
+                return False
+            node = node.children[c]
+        return node.end_of_word
+
+    def starts_with(self, prefix: str) -> bool:
+        node = self
+        for c in prefix:
+            if c not in node.children:
+                return False
+            node = node.children[c]
+        return True
+
+    def get_words_with_prefix(self, prefix: str) -> list[str]:
+        node = self
+        for c in prefix:
+            if c not in node.children:
+                return []   # prefix not found
+            node = node.children[c]
+
+        results = []
+        self._dfs(node, prefix, results)
+        return results
+
+    def _dfs(self, node, path, results):
+        if node.end_of_word:
+            results.append(path)
+        for c, child in node.children.items():
+            self._dfs(child, path + c, results)`;
+
+const TRIES_JAVA = `import java.util.*;
+
+class TrieNode {
+    public TrieNode[] children;
+    public boolean endOfWord = false;
+
+    public TrieNode() {
+        children = new TrieNode[26];
+    }
+
+    public void insert(String word) {
+        TrieNode node = this;
+        for (int i = 0; i < word.length(); ++i) {
+            char c = word.charAt(i);
+            if (node.children[c - 'a'] == null)
+                node.children[c - 'a'] = new TrieNode();
+            node = node.children[c - 'a'];
+        }
+        node.endOfWord = true;
+    }
+
+    public boolean search(String word) {
+        TrieNode node = this;
+        for (int i = 0; i < word.length(); ++i) {
+            char c = word.charAt(i);
+            if (node.children[c - 'a'] == null) return false;
+            node = node.children[c - 'a'];
+        }
+        return node.endOfWord;
+    }
+
+    public boolean startsWith(String prefix) {
+        TrieNode node = this;
+        for (int i = 0; i < prefix.length(); ++i) {
+            char c = prefix.charAt(i);
+            if (node.children[c - 'a'] == null) return false;
+            node = node.children[c - 'a'];
+        }
+        return true;
+    }
+
+    public List<String> getWordsWithPrefix(String prefix) {
+        List<String> results = new ArrayList<>();
+        TrieNode node = this;
+        for (int i = 0; i < prefix.length(); ++i) {
+            char c = prefix.charAt(i);
+            if (node.children[c - 'a'] == null)
+                return results;  // prefix not found
+            node = node.children[c - 'a'];
+        }
+        dfs(node, prefix, results);  // DFS from that node
+        return results;
+    }
+
+    private void dfs(TrieNode node, String path, List<String> results) {
+        if (node.endOfWord) results.add(path);
+        for (int i = 0; i < 26; ++i) {
+            if (node.children[i] != null)
+                dfs(node.children[i], path + (char) ('a' + i), results);
+        }
+    }
+}`;
 
 /* complexity + sparklines */
 const FN = { lin: n => n, log: n => Math.max(1, Math.log2(n + 1)), nlog: n => n * Math.log2(n + 2), sq: n => n * n, cube: n => n * n * n, mul: n => n * n, nk: n => n * Math.log2(n + 2), ve: n => n * 1.6, elogv: n => n * Math.log2(n + 2), mn: n => n * n, exp: n => Math.pow(2, Math.min(n, 34)) };
@@ -287,7 +453,9 @@ export default function Patterns() {
       + P.map(p => '<div class="rail-i" data-go="' + p.id + '"><b>' + pad2(p.n) + '</b>' + p.name + '</div>').join('')
       + '<div class="rail-i" data-go="dp"><b>DP</b>20 DP patterns</div>'
       + '<div class="rail-i" data-go="cheatsheet"><b>CS</b>Cheatsheet</div>'
-      + '<div class="rail-i" data-go="resources"><b>EXT</b>Resources</div>';
+      + '<div class="rail-i" data-go="resources"><b>EXT</b>Resources</div>'
+      + '<div class="rail-i" data-go="recognition"><b>PR</b>Recognition</div>'
+      + '<div class="rail-i" data-go="tries"><b>TR</b>Tries</div>';
     const cheat = P.map(p => '<tr><td class="cx">' + pad2(p.n) + '</td>'
       + '<td><strong><button class="foot-l" style="display:inline;padding:0;background:none;border:0;cursor:pointer;color:var(--a-300)" data-go="' + p.id + '">' + p.name + '</button></strong>'
       + '<br><span style="font-size:11px;color:var(--text-mute)">DSA pattern' + (p.core ? ' · ★ core' : '') + '</span></td>'
@@ -361,6 +529,8 @@ export default function Patterns() {
             <button className="nav-link" data-go="dp">20 DP Patterns</button>
             <button className="nav-link" data-go="cheatsheet">Cheatsheet</button>
             <button className="nav-link" data-go="resources">Resources</button>
+            <button className="nav-link" data-go="recognition">Recognition</button>
+            <button className="nav-link" data-go="tries">Tries</button>
             <button className="nav-link" onClick={() => { window.location.href = '/'; }}>← Tracker</button>
           </div>
           <div className="nav-right">
@@ -505,6 +675,129 @@ export default function Patterns() {
               <a className="res-card" href="https://github.com/ashishps1/awesome-leetcode-resources" target="_blank" rel="noopener"><div className="rc-ico">★</div><div><div className="rc-t">awesome-leetcode-resources</div><div className="rc-d">Curated roadmap lists, pattern guides and solution sets.</div></div><span className="rc-ext">↗</span></a>
             </div>
             <div className="note-warn" style={{ marginTop: 22 }}><strong>Source material:</strong> this playbook is built on three essays by <b>Ashish Pratap Singh</b> (AlgoMaster) — <a href="https://blog.algomaster.io/p/20-dsa-patterns" target="_blank" rel="noopener">20 DSA Patterns</a>, <a href="https://blog.algomaster.io/p/20-patterns-to-master-dynamic-programming" target="_blank" rel="noopener">20 DP Patterns</a> and <a href="https://blog.algomaster.io/p/how-i-mastered-data-structures-and-algorithms" target="_blank" rel="noopener">How I Mastered DSA</a>.</div>
+          </div>
+        </section>
+
+        <section className="sec" id="recognition">
+          <div className="wrap">
+            <div className="sec-head">
+              <span className="sec-num">06 · Pattern recognition</span>
+              <h2>LeetCode Pattern Recognition Cheat Sheet</h2>
+              <p className="sub">A four-step flow to map any problem to a pattern: check the constraints, read the input format, read the output format, then scan the keywords. Contributed by <b>Bitflip</b>.</p>
+            </div>
+
+            <h3 style={{ margin: '22px 0 12px' }}>Step 1 — Check the constraints</h3>
+            <div className="grid g3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 12 }}>
+              {PR_CONSTRAINTS.map(c => (
+                <div className="card" key={c.t}>
+                  <div className="card-t"><span className={`kw-tag ${c.cls}`}>{c.tag}</span> {c.t}</div>
+                  <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13.5, lineHeight: 1.7, color: 'var(--text-dim)' }}>
+                    {c.items.map(it => <li key={it}>{it}</li>)}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+            <h3 style={{ margin: '30px 0 12px' }}>Step 2 — Analyze the input format</h3>
+            <div className="grid g3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 12 }}>
+              {PR_INPUT.map(c => (
+                <div className="card" key={c.t}>
+                  <div className="card-t">{c.t}</div>
+                  <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13.5, lineHeight: 1.7, color: 'var(--text-dim)' }}>
+                    {c.items.map(it => <li key={it}>{it}</li>)}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+            <h3 style={{ margin: '30px 0 12px' }}>Step 3 — Analyze the output format</h3>
+            <div className="grid g4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
+              {PR_OUTPUT.map(c => (
+                <div className="card" key={c.t}>
+                  <div className="card-t">{c.t}</div>
+                  <div className="card-d" style={{ fontSize: 12, color: 'var(--text-mute)' }}>{c.d}</div>
+                  <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13.5, lineHeight: 1.7, color: 'var(--text-dim)' }}>
+                    {c.items.map(it => <li key={it}>{it}</li>)}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+            <h3 style={{ margin: '30px 0 12px' }}>Step 4 — Keyword → pattern recognition</h3>
+            <div className="grid g3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(250px,1fr))', gap: 12 }}>
+              {PR_KEYWORDS.map(([name, kws]) => (
+                <div className="card" key={name}>
+                  <div className="card-t">{name}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                    {kws.map(k => <span className="kw" key={k}>{k}</span>)}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="note-warn" style={{ marginTop: 22 }}>Print it out, keep it by you — but <b>not</b> during your interview 😉 · contributed by <b>Bitflip</b>.</div>
+          </div>
+        </section>
+
+        <section className="sec" id="tries">
+          <div className="wrap">
+            <div className="sec-head">
+              <span className="sec-num">07 · Prefix trees</span>
+              <h2>Ultimate Guide to Prefix Trees (Tries)</h2>
+              <p className="sub">The four operations that matter, the keywords that give it away, the complexity, a practice roadmap and full Python + Java implementations. Contributed by <b>Bitflip</b>.</p>
+            </div>
+
+            <div className="grid g4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
+              {TRIES_FUNCS.map(f => (
+                <div className="card" key={f.t}>
+                  <div className="card-t">{f.t}</div>
+                  <div className="card-d" style={{ fontSize: 13, lineHeight: 1.7 }}>{f.d}</div>
+                </div>
+              ))}
+            </div>
+
+            <h3 style={{ margin: '30px 0 12px' }}>Keywords &amp; key indicators</h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {TRIES_KEYWORDS.map(k => <span className="kw" key={k}>{k}</span>)}
+            </div>
+
+            <h3 style={{ margin: '30px 0 12px' }}>Time &amp; space complexity</h3>
+            <div className="tbl-wrap"><table className="cx-table">
+              <thead><tr><th>Operation</th><th className="cx">Time</th><th className="cx">Space</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Insert</strong></td><td className="cx cx-ok">O(L)</td><td className="cx">O(L) worst</td></tr>
+                <tr><td><strong>Search</strong></td><td className="cx cx-ok">O(L)</td><td className="cx">O(1)</td></tr>
+                <tr><td><strong>StartsWith</strong></td><td className="cx cx-ok">O(L)</td><td className="cx">O(1)</td></tr>
+                <tr><td><strong>Get All Words</strong></td><td className="cx cx-ok">O(L + K)</td><td className="cx">O(K)</td></tr>
+              </tbody>
+            </table></div>
+            <p className="sub" style={{ marginTop: 8 }}>L = word length · K = total characters across all matching words. Building the trie costs <b>O(N·L)</b> space for N words.</p>
+
+            <h3 style={{ margin: '30px 0 12px' }}>Implementations</h3>
+            <div className="code-files" dangerouslySetInnerHTML={{ __html: codeBlock('python', 'Python', 'full Trie implementation', TRIES_PY) + codeBlock('java', 'Java', 'same API — array-based children', TRIES_JAVA) }} />
+
+            <h3 style={{ margin: '30px 0 12px' }}>Practice problem roadmap</h3>
+            <div className="grid g2" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 14 }}>
+              <div className="lc-list">
+                {TRIES_PRACTICE.map(q => (
+                  <div className="lc-row" key={q[0]}>
+                    <a className="lc" href={lcURL(q[0], q[1])} target="_blank" rel="noopener noreferrer">
+                      <span className="lc-id">{q[0]}</span>
+                      <span className="lc-t">{q[1]}</span>
+                      <span className="lc-pick">{q[2]}</span>
+                      <span className="lc-ext">↗</span>
+                    </a>
+                    <span className="lc-day-box" dangerouslySetInnerHTML={{ __html: dayLinks(q[0]) }} />
+                  </div>
+                ))}
+              </div>
+              <div className="card spot" style={{ alignSelf: 'start' }}>
+                <div className="pm-h">How to practice</div>
+                <div className="card-d" style={{ fontSize: 13, lineHeight: 1.75 }}>Start with <b>208 — Implement Trie</b> and work down: each problem adds exactly one idea (wildcards, board DFS, root prefixes, substitution, suffix search, autocomplete, compound words, palindrome pairs). Re-solve each from memory a week later, and follow the 📌 day links into your DSA-400 plan.</div>
+              </div>
+            </div>
+
+            <div className="note-warn" style={{ marginTop: 22 }}>Contributed by <b>Bitflip</b> — Python &amp; Java implementations as in the guide.</div>
           </div>
         </section>
       </main>
