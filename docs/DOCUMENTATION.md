@@ -182,7 +182,7 @@ Supabase). Republishing overwrites it (same slug).
 | Key | Shape | Render |
 |---|---|---|
 | `example` | `{ input, output, explanation }` | two code boxes (green "OUTPUT" tag) + explanation |
-| `complexity` | `{ time, space }` | big-O badges **+ an interactive growth panel**. A **log-scale slider** sweeps the input size `n` from 1 → 10⁶ and each of Time (orange `#fb923c`) and Space (sky `#38bdf8`) is plotted on **shared log–log axes** (x = log₁₀ n, y = log₁₀ ops, 10⁰–10¹⁸) with a `10⁷ ops ≈ 1 s` reference line — so `O(n)`, `O(n²)`, `O(n⁴)`, `O(2ⁿ)`, `O(n!)` are all visibly different slopes. A live readout shows **operations** and **time @ 10⁷ ops/s** at the current `n`, with a green/yellow/red grade. Any notation is parsed dynamically (`O(n^4)`, `O(n log n)`, `O(n²+m)`, `O(n·m)`, …); unparseable strings degrade gracefully. |
+| `complexity` | `{ time, space, axis? }` | big-O badges **+ an interactive growth panel**. A **log-scale slider** sweeps the input size `n` (1 → `nMax`) and each of Time (orange `#fb923c`) and Space (sky `#38bdf8`) is plotted on **log–log axes** with a `10⁷ ops ≈ 1 s` reference line. The axes are **author-controlled** (stored in `axis = { nMax, opsMax }`, editor-only sliders): **horizontal** = `n` up to 10¹–10⁹, **vertical** = ops up to 10²–10¹⁸ — zooming in makes `O(n²)` vs `O(n^2.5)` visibly different. A live readout shows **operations** and **time @ 10⁷ ops/s** at the current `n`, graded fast/seconds/too-slow. Any notation is parsed dynamically; unparseable strings degrade gracefully. |
 | `pattern` | string | "Pattern recognition" freetext block |
 | `mistakes` | string (optional) | warning-styled block |
 
@@ -339,13 +339,21 @@ npm run update:lc    # regenerate lc-titles.js + lc-plan.js from the live LC ind
 - Without `.env`, the app runs in **demo mode** (localStorage persistence).
 - Deploy: see `DEPLOY.md`.
 
-### Schema migration for articles
+### Schema migration for articles (v9 — username scoping)
 
 ```sql
-alter table public.articles add column if not exists schema_version int not null default 1;
-alter table public.articles add column if not exists github_url text;
-alter table public.articles add column if not exists blocks jsonb;
+alter table public.articles drop constraint if exists articles_pkey;
+alter table public.articles add column if not exists username    text not null default '';
+alter table public.articles add column if not exists author_name text;
+alter table public.articles add column if not exists video       jsonb;
+create unique index if not exists articles_username_slug_uq on public.articles (username, slug);
 ```
+
+> The app **still works without this migration**: publish/load/list/delete fall
+> back to the pre-v9 slug-only schema, so articles remain public either way. But
+> running it enables true per-user slug isolation (`/note/raghav/day-7` vs
+> `/note/other/day-7`). After running it, re-publish any article that was saved
+> local-only.
 
 ---
 
