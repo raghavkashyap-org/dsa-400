@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTrackerData } from '../hooks/useTrackerData';
+import { TRACKER_DATA } from '../lib/tracker-data';
 import { renderMarkdown, slugify, extractYouTubeId } from '../lib/note-mdx';
 import { VideoEmbed } from '../components/editor/VideoEmbed';
 import GitHubSection from '../components/editor/GitHubSection';
@@ -69,13 +70,24 @@ export default function NoteEditor() {
 
   const taRef = useRef(null);
 
-  /* ── defaults from the tracker (streak / current day) ── */
+  /* ── defaults from the tracker (streak / current day / topic) ── */
+  const currentDay = useMemo(() => {
+    const d = TRACKER_DATA.days.find(x => x.id === tracker.pointer);
+    return d || null;
+  }, [tracker.pointer]);
+
+  const defaultTitle = currentDay
+    ? `Day ${tracker.pointer} — ${currentDay.concept || currentDay.unit}`
+    : `Day ${tracker.pointer || 1} — what I learned`;
+  const defaultSlug = `day-${tracker.pointer || 1}`;
+
   useEffect(() => {
     if (tracker.ready) {
       setDayStreak(d => (d || tracker.streak || 0));
-      setTitle(t => (t || `Day ${tracker.pointer} — what I learned`));
+      setTitle(t => (t || defaultTitle));
+      setSlug(s => (s || defaultSlug));
     }
-  }, [tracker.ready, tracker.streak, tracker.pointer]); // eslint-disable-line
+  }, [tracker.ready, tracker.streak, tracker.pointer, defaultTitle, defaultSlug]);
 
   /* ── load draft once (or an existing article via ?edit=slug, or ?pattern=ID) ── */
   useEffect(() => {
@@ -260,12 +272,12 @@ export default function NoteEditor() {
       <main className="n-shell">
         {/* ── meta ── */}
         <section className="n-meta">
-          <span className="n-kicker">Daily Coding Article · Day {dayStreak || '—'}</span>
-          <input className="n-title" placeholder="Article title…" value={title} onChange={e => setTitle(e.target.value)} />
+          <span className="n-kicker">Daily Coding Article · {currentDay ? `Day ${tracker.pointer} · ${currentDay.unit}` : `Day ${dayStreak || '—'}`}</span>
+          <input className="n-title" placeholder={defaultTitle} value={title} onChange={e => setTitle(e.target.value)} />
           <div className="n-meta-row">
             <label className="n-field"><span>Date</span><input type="date" value={date} onChange={e => setDate(e.target.value)} /></label>
             <label className="n-field"><span>Day streak</span><input type="number" min="0" value={dayStreak} onChange={e => setDayStreak(+e.target.value)} /></label>
-            <label className="n-field n-field-slug"><span>Slug</span><input value={slug} onChange={e => setSlug(e.target.value)} placeholder={slugify(title) || 'auto'} /></label>
+            <label className="n-field n-field-slug"><span>Slug</span><input value={slug} onChange={e => setSlug(e.target.value)} placeholder={defaultSlug} /></label>
             <label className="n-field"><span>Tags (comma)</span><input value={tags} onChange={e => setTags(e.target.value)} placeholder="DSA, Binary Search, C++" /></label>
             <label className="n-field"><span>Main video URL</span><input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=…" /></label>
             <label className="n-field n-field-slug"><span>GitHub problem link</span><input value={githubUrl} onChange={e => setGithubUrl(e.target.value)} placeholder="https://github.com/…/835-image-overlap" /></label>

@@ -164,7 +164,11 @@ function leafInline(t) {
     case 'image': {
       const src = t.attrGet('src') || '';
       const alt = t.children && t.children[0] ? t.children[0].content : '';
-      return <img key={key()} src={src} alt={alt} title={t.attrGet('title') || undefined} loading="lazy" />;
+      return (
+        <a key={key()} className="n-img-link" href={src} target="_blank" rel="noopener noreferrer" title={alt || 'Open image'}>
+          <img src={src} alt={alt} title={t.attrGet('title') || undefined} loading="lazy" />
+        </a>
+      );
     }
     case 'html_inline': return <span key={key()} dangerouslySetInnerHTML={{ __html: t.content }} />;
     case 'video': return <VideoEmbed key={key()} videoId={t.videoId} title={t.title} />;

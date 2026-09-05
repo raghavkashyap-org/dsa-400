@@ -1286,3 +1286,25 @@ a.n-chip:hover { border-color:var(--no-500); color:var(--no-400); }
 /* v9 fix: generic spacer used across note toolbar/nav */
 .spacer { flex: 1; }
 .n-tb.spacer { flex: 1; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v10 · additive enhancements (kept on top of the user's fixed styles)
+   ─ inline article/GitHub images: sized to the article, centered, framed,
+     clickable to open full-size ─ complexity charts: aligned grid ─        */
+.n-md a.n-img-link { display: block; max-width: 100%; text-decoration: none; }
+.n-md img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  max-height: 560px;
+  margin: 14px auto;
+  border-radius: 12px;
+  border: 1px solid var(--no-700, rgba(255,255,255,.14));
+  background: #0a0a0c;
+  box-shadow: 0 10px 30px rgba(0,0,0,.45);
+  transition: transform .18s ease, border-color .18s ease;
+}
+.n-md a.n-img-link:hover img { border-color: var(--no-500, #f97316); transform: translateY(-1px); }
+.n-cx-grid { align-items: flex-start; }
+.n-spark { width: 220px; display: flex; flex-direction: column; }
+.n-spark svg { flex: none; }

@@ -121,6 +121,10 @@ detect old payload shapes.
   and "✓ auto-saves".
 - **Draft content** (all persisted): `title, date, dayStreak, slug, tags, videoUrl,
   githubUrl, blocks, markdown`.
+- **Tracker-aware defaults**: a new draft defaults to **slug `day-X`** (X = the user's
+  current day in the tracker — the first included, unsealed day) and a **title
+  `Day X — {topic}`** taken from that day's concept / week unit. Existing drafts and
+  `?edit=` loads are never overwritten.
 
 ### 5.2 Opening an existing article for editing
 
@@ -167,7 +171,7 @@ Supabase). Republishing overwrites it (same slug).
 | Key | Shape | Render |
 |---|---|---|
 | `example` | `{ input, output, explanation }` | two code boxes (green "OUTPUT" tag) + explanation |
-| `complexity` | `{ time, space }` | big-O badges **+ sparkline growth charts** (time = orange `#fb923c`, space = sky `#38bdf8`). Curves: `c1, logn, sqrt, n, nlogn, n2, n3, exp, nf`. Chart maps the given big-O string to its curve; falls back to flat if unknown. |
+| `complexity` | `{ time, space }` | big-O badges **+ sparkline growth charts** (time = orange `#fb923c`, space = sky `#38bdf8`) on a **log y-axis**. Any notation is parsed dynamically — `O(n^4)`, `O(n log n)`, `O(n²+m)`, `O(2^n)`, `O(n!)`, `O(√n)`, `O(log n)`, `O(1)`, `O(n·m)`… — so a chart always exists for whatever you type; unparseable strings fall back to a flat guide. |
 | `pattern` | string | "Pattern recognition" freetext block |
 | `mistakes` | string (optional) | warning-styled block |
 

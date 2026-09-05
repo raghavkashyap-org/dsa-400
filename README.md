@@ -154,8 +154,9 @@ Beyond the Markdown body, an article can carry structured blocks (stored as opti
 so old v1 articles render unchanged):
 - **📌 Example** — input / output / explanation, styled as separate code boxes.
 - **📈 Time & Space complexity** — big-O badges plus **small growth sparkline charts**
-  (O(1), O(log n), O(√n), O(n), O(n log n), O(n²), O(n³), O(2ⁿ), O(n!)) for both time and
-  space, in a collapsible block.
+  for both time and space, in a collapsible block. Any notation is **parsed dynamically**
+  (e.g. `O(n^4)`, `O(n log n)`, `O(2^n)`, `O(n!)`) and plotted on a log y-axis — so there
+  is always a chart for whatever complexity you type, never a fixed set of curves.
 - **🧩 Pattern recognition** — free-text block.
 - **⚠️ Mistakes I made** — optional, styled as a warning block.
 
