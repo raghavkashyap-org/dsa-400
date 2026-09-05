@@ -155,8 +155,10 @@ so old v1 articles render unchanged):
 - **📌 Example** — input / output / explanation, styled as separate code boxes.
 - **📈 Time & Space complexity** — big-O badges plus an **interactive growth panel**: a
   **log-scale slider** sweeps `n` from 1 → 10⁶ and each of Time/Space is plotted on
-  **shared log–log axes** with a `10⁷ ops ≈ 1 s` reference line, so `O(n)`, `O(n²)`,
-  `O(n⁴)`, `O(2ⁿ)`, `O(n!)` look genuinely different. A live readout shows **operations
+  **log–log axes** with a `10⁷ ops ≈ 1 s` reference line, so `O(n)`, `O(n²)`, `O(n⁴)`,
+  `O(2ⁿ)`, `O(n!)` look genuinely different. **The axes are author-controlled at edit
+  time** (horizontal `n` up to 10¹–10⁹, vertical ops up to 10²–10¹⁸) so zooming in
+  separates close curves like `O(n²)` vs `O(n^2.5)`. A live readout shows **operations
   & time @ 10⁷ ops/s** at the current `n`, graded fast/seconds/too-slow.
 - **🧩 Pattern recognition** — free-text block.
 - **⚠️ Mistakes I made** — optional, styled as a warning block.
